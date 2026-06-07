@@ -22,5 +22,5 @@
   hosts like Vercel. Set these environment variables in your hosting dashboard:
 
   - `OPENAI_API_KEY`
-  - `OPENAI_IMAGE_MODEL` (optional, defaults to `gpt-image-1`)
+  - `OPENAI_IMAGE_MODEL` (optional, one of `gpt-image-1.5`, `gpt-image-1`, or `gpt-image-1-mini`; defaults to `gpt-image-1`)
   
