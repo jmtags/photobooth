@@ -22,12 +22,12 @@ function PhotoTile({ url, w, h, bg }: { url: string; w: number; h: number; bg: P
   return (
     <div
       style={{ width: w, height: h, ...bgStyle }}
-      className="overflow-hidden border border-[#CBD5E1] flex-shrink-0 flex items-center justify-center"
+      className="overflow-hidden border border-[#CBD5E1] flex-shrink-0"
     >
       <img
         src={url}
         alt="ID photo"
-        className="w-full h-full object-contain object-center"
+        className="w-full h-full object-cover object-[center_38%]"
       />
     </div>
   );
