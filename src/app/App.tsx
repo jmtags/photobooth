@@ -59,10 +59,18 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ photoUrl, options }),
       });
-      const data = await response.json();
+
+      const contentType = response.headers.get("content-type") ?? "";
+      const data = contentType.includes("application/json")
+        ? await response.json()
+        : { error: await response.text() };
 
       if (!response.ok) {
         throw new Error(data.error ?? "Photo processing failed.");
+      }
+
+      if (!data.processedPhotoUrl) {
+        throw new Error("Photo processing did not return an image.");
       }
 
       setProcessedPhotoUrl(data.processedPhotoUrl);
