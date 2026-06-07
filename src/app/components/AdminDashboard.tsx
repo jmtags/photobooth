@@ -1,0 +1,307 @@
+import { useState } from "react";
+import { Card, StatusBadge, Btn } from "./ui";
+import {
+  LayoutDashboard,
+  ShoppingBag,
+  Printer,
+  LayoutTemplate,
+  Settings,
+  Users,
+  TrendingUp,
+  DollarSign,
+  Star,
+  Menu,
+  X,
+  LogOut,
+  ChevronRight,
+} from "lucide-react";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+
+const chartData = [
+  { time: "9am", prints: 4 },
+  { time: "10am", prints: 8 },
+  { time: "11am", prints: 12 },
+  { time: "12pm", prints: 18 },
+  { time: "1pm", prints: 14 },
+  { time: "2pm", prints: 22 },
+  { time: "3pm", prints: 30 },
+  { time: "4pm", prints: 25 },
+  { time: "5pm", prints: 19 },
+];
+
+const orders = [
+  { id: "#1042", customer: "John D.", size: "2×2", time: "3:42 PM", status: "done" as const },
+  { id: "#1041", customer: "Sarah M.", size: "Passport", time: "3:28 PM", status: "done" as const },
+  { id: "#1040", customer: "Mike R.", size: "Mixed", time: "3:15 PM", status: "active" as const },
+  { id: "#1039", customer: "Lisa K.", size: "1×1", time: "2:58 PM", status: "done" as const },
+  { id: "#1038", customer: "Tom W.", size: "2×2", time: "2:44 PM", status: "done" as const },
+  { id: "#1037", customer: "Anna B.", size: "Passport", time: "2:30 PM", status: "pending" as const },
+];
+
+const navItems = [
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "orders", label: "Orders", icon: ShoppingBag },
+  { id: "history", label: "Print History", icon: Printer },
+  { id: "templates", label: "Templates", icon: LayoutTemplate },
+  { id: "settings", label: "Settings", icon: Settings },
+];
+
+interface Props {
+  onExit: () => void;
+}
+
+export function AdminDashboard({ onExit }: Props) {
+  const [activeNav, setActiveNav] = useState("dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const widgets = [
+    { label: "Customers Today", value: "47", icon: Users, color: "#2563EB", bg: "#EFF6FF", change: "+12%" },
+    { label: "Total Prints Today", value: "184", icon: Printer, color: "#22C55E", bg: "#F0FDF4", change: "+8%" },
+    { label: "Revenue Today", value: "$368", icon: DollarSign, color: "#F59E0B", bg: "#FFFBEB", change: "+15%" },
+    { label: "Most Popular Size", value: "2×2", icon: Star, color: "#8B5CF6", bg: "#F5F3FF", change: "Passport #2" },
+  ];
+
+  const Sidebar = ({ mobile = false }: { mobile?: boolean }) => (
+    <div
+      className={`${
+        mobile ? "w-full" : "w-64 hidden md:flex"
+      } flex-col bg-white border-r border-[#E2E8F0] h-full flex-shrink-0`}
+    >
+      {/* Logo area */}
+      <div className="flex items-center justify-between px-5 py-5 border-b border-[#E2E8F0]">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-[#2563EB] rounded-xl flex items-center justify-center">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <rect x="2" y="2" width="6" height="7" rx="1" fill="white" />
+              <rect x="10" y="2" width="6" height="7" rx="1" fill="white" opacity="0.7" />
+              <rect x="2" y="11" width="6" height="5" rx="1" fill="white" opacity="0.7" />
+              <rect x="10" y="11" width="6" height="5" rx="1" fill="white" />
+            </svg>
+          </div>
+          <div>
+            <p className="font-bold text-[#0F172A] text-sm">ID Kiosk</p>
+            <p className="text-[10px] text-[#64748B]">Admin Panel</p>
+          </div>
+        </div>
+        {mobile && (
+          <button type="button" onClick={() => setSidebarOpen(false)}>
+            <X size={20} color="#64748B" />
+          </button>
+        )}
+      </div>
+
+      {/* Nav */}
+      <nav className="flex-1 py-4 px-3">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const active = activeNav === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => {
+                setActiveNav(item.id);
+                setSidebarOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl mb-1 transition-all text-left ${
+                active
+                  ? "bg-[#2563EB] text-white"
+                  : "text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#0F172A]"
+              }`}
+            >
+              <Icon size={18} />
+              <span className="text-sm font-semibold">{item.label}</span>
+              {active && <ChevronRight size={14} className="ml-auto opacity-70" />}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Exit */}
+      <div className="p-4 border-t border-[#E2E8F0]">
+        <button
+          type="button"
+          onClick={onExit}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[#EF4444] hover:bg-red-50 transition-all"
+        >
+          <LogOut size={18} />
+          <span className="text-sm font-semibold">Exit Admin</span>
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="h-screen flex bg-[#F8FAFC] font-[Inter,sans-serif] overflow-hidden">
+      {/* Desktop sidebar */}
+      <Sidebar />
+
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setSidebarOpen(false)}
+          />
+          <div className="absolute left-0 top-0 bottom-0 w-72 bg-white z-10 flex flex-col">
+            <Sidebar mobile />
+          </div>
+        </div>
+      )}
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top bar */}
+        <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-[#E2E8F0] flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className="md:hidden w-9 h-9 flex items-center justify-center rounded-lg hover:bg-[#F8FAFC] border border-[#E2E8F0]"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu size={18} color="#64748B" />
+            </button>
+            <div>
+              <h1 className="font-bold text-[#0F172A] text-lg capitalize">{activeNav}</h1>
+              <p className="text-xs text-[#64748B]">Saturday, June 6, 2026</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 text-xs font-semibold px-3 py-1.5 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+              Kiosk Online
+            </div>
+            <div className="w-9 h-9 rounded-full bg-[#2563EB] flex items-center justify-center text-white text-sm font-bold">
+              A
+            </div>
+          </div>
+        </div>
+
+        {/* Dashboard content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {activeNav === "dashboard" && (
+            <div className="flex flex-col gap-6 max-w-5xl">
+              {/* Widgets */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {widgets.map((w) => {
+                  const Icon = w.icon;
+                  return (
+                    <Card key={w.label} className="p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div
+                          className="w-10 h-10 rounded-xl flex items-center justify-center"
+                          style={{ backgroundColor: w.bg }}
+                        >
+                          <Icon size={20} color={w.color} />
+                        </div>
+                        <span className="text-xs font-semibold text-[#22C55E]">{w.change}</span>
+                      </div>
+                      <p className="text-2xl font-extrabold text-[#0F172A]">{w.value}</p>
+                      <p className="text-xs text-[#64748B] mt-0.5">{w.label}</p>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              {/* Chart */}
+              <Card className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="font-bold text-[#0F172A]">Prints Today</h3>
+                    <p className="text-xs text-[#64748B]">Hourly activity</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-sm text-[#22C55E] font-semibold">
+                    <TrendingUp size={16} />
+                    +23%
+                  </div>
+                </div>
+                <ResponsiveContainer width="100%" height={180}>
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient id="colorPrints" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#2563EB" stopOpacity={0.15} />
+                        <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+                    <XAxis dataKey="time" tick={{ fontSize: 11, fill: "#94A3B8" }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: "#94A3B8" }} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      contentStyle={{ borderRadius: 12, border: "1px solid #E2E8F0", fontSize: 12 }}
+                      labelStyle={{ fontWeight: 600, color: "#0F172A" }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="prints"
+                      stroke="#2563EB"
+                      strokeWidth={2.5}
+                      fill="url(#colorPrints)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </Card>
+
+              {/* Recent orders */}
+              <Card className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-[#0F172A]">Recent Orders</h3>
+                  <Btn size="sm" variant="ghost">View All</Btn>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-[#F1F5F9]">
+                        {["Order", "Customer", "Size", "Time", "Status"].map((h) => (
+                          <th key={h} className="text-left py-2 px-3 text-xs font-semibold text-[#64748B]">
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orders.map((order) => (
+                        <tr key={order.id} className="border-b border-[#F8FAFC] hover:bg-[#F8FAFC] transition-colors">
+                          <td className="py-3 px-3 font-mono font-semibold text-[#2563EB] text-xs">{order.id}</td>
+                          <td className="py-3 px-3 font-semibold text-[#0F172A]">{order.customer}</td>
+                          <td className="py-3 px-3 text-[#64748B]">{order.size}</td>
+                          <td className="py-3 px-3 text-[#64748B]">{order.time}</td>
+                          <td className="py-3 px-3">
+                            <StatusBadge status={order.status} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {activeNav !== "dashboard" && (
+            <div className="flex flex-col items-center justify-center h-64 gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-center">
+                {(() => {
+                  const item = navItems.find((n) => n.id === activeNav);
+                  const Icon = item?.icon || LayoutDashboard;
+                  return <Icon size={28} color="#94A3B8" />;
+                })()}
+              </div>
+              <div className="text-center">
+                <p className="font-bold text-[#0F172A] capitalize">{activeNav}</p>
+                <p className="text-sm text-[#64748B] mt-1">This section is coming soon</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
