@@ -4,9 +4,11 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
+    "api": "node server.mjs",
     "build": "vite build",
     "dev": "vite",
-    "dev:https": "vite --host 0.0.0.0"
+    "dev:https": "vite --host 0.0.0.0",
+    "dev:full": "node scripts/dev-full.mjs"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

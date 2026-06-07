@@ -63,7 +63,7 @@ export function LivePreviewScreen({ photoUrl, options, onBack, onGenerate }: Pro
                 <img
                   src={photoUrl}
                   alt="Processed portrait"
-                  className="w-full h-full object-cover mix-blend-multiply"
+                  className="w-full h-full object-cover"
                   style={{
                     filter: [
                       options.brightness ? "brightness(1.1) contrast(1.05)" : "",

@@ -35,18 +35,50 @@ const defaultOptions: PhotoOptions = {
 export default function App() {
   const [screen, setScreen] = useState<Screen>("welcome");
   const [photoUrl, setPhotoUrl] = useState<string>("");
+  const [processedPhotoUrl, setProcessedPhotoUrl] = useState<string>("");
   const [options, setOptions] = useState<PhotoOptions>(defaultOptions);
+  const [processing, setProcessing] = useState(false);
+  const [processError, setProcessError] = useState<string | null>(null);
 
   const go = (s: Screen) => setScreen(s);
 
   const handleCapture = useCallback((url: string) => {
     setPhotoUrl(url);
+    setProcessedPhotoUrl("");
+    setProcessError(null);
     go("review");
   }, []);
 
+  const handlePreview = async () => {
+    setProcessing(true);
+    setProcessError(null);
+
+    try {
+      const response = await fetch("/api/process-photo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photoUrl, options }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "Photo processing failed.");
+      }
+
+      setProcessedPhotoUrl(data.processedPhotoUrl);
+      go("preview");
+    } catch (err) {
+      setProcessError(err instanceof Error ? err.message : "Photo processing failed.");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const handleNewSession = () => {
     setPhotoUrl("");
+    setProcessedPhotoUrl("");
     setOptions(defaultOptions);
+    setProcessError(null);
     go("welcome");
   };
 
@@ -73,12 +105,14 @@ export default function App() {
           options={options}
           onChange={setOptions}
           onBack={() => go("review")}
-          onContinue={() => go("preview")}
+          onContinue={handlePreview}
+          processing={processing}
+          processError={processError}
         />
       )}
       {screen === "preview" && (
         <LivePreviewScreen
-          photoUrl={photoUrl}
+          photoUrl={processedPhotoUrl || photoUrl}
           options={options}
           onBack={() => go("options")}
           onGenerate={() => go("layout")}
@@ -86,7 +120,7 @@ export default function App() {
       )}
       {screen === "layout" && (
         <PrintLayoutScreen
-          photoUrl={photoUrl}
+          photoUrl={processedPhotoUrl || photoUrl}
           options={options}
           onBack={() => go("preview")}
           onPrint={() => go("printing")}

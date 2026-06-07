@@ -15,9 +15,11 @@ interface Props {
   onChange: (o: PhotoOptions) => void;
   onBack: () => void;
   onContinue: () => void;
+  processing?: boolean;
+  processError?: string | null;
 }
 
-export function PhotoOptionsScreen({ options, onChange, onBack, onContinue }: Props) {
+export function PhotoOptionsScreen({ options, onChange, onBack, onContinue, processing, processError }: Props) {
   const set = <K extends keyof PhotoOptions>(key: K, val: PhotoOptions[K]) =>
     onChange({ ...options, [key]: val });
 
@@ -154,10 +156,15 @@ export function PhotoOptionsScreen({ options, onChange, onBack, onContinue }: Pr
             <Btn variant="secondary" onClick={onBack} className="flex-1">
               Back
             </Btn>
-            <Btn onClick={onContinue} className="flex-1">
-              Preview Result
+            <Btn onClick={onContinue} disabled={processing} className="flex-1">
+              {processing ? "Processing..." : "Preview Result"}
             </Btn>
           </div>
+          {processError && (
+            <p className="text-sm text-[#EF4444] bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+              {processError}
+            </p>
+          )}
         </div>
       </div>
     </Screen>
