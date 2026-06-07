@@ -48,14 +48,14 @@ export function LivePreviewScreen({ photoUrl, options, onBack, onGenerate }: Pro
 
   return (
     <Screen>
-      <NavHeader onBack={onBack} title="Live Preview" step={5} totalSteps={7} />
+      <NavHeader onBack={onBack} title="Preview" step={3} totalSteps={5} />
 
       <div className="flex-1 overflow-y-auto px-4 md:px-6 py-6">
         <div className="max-w-3xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Left: processed photo */}
             <div className="flex flex-col gap-4">
-              <h2 className="text-lg font-bold text-[#0F172A]">Processed Photo</h2>
+              <h2 className="text-lg font-bold text-[#0F172A]">Your Photo</h2>
               <div
                 className="relative rounded-2xl overflow-hidden shadow-xl border border-[#E2E8F0] aspect-[3/4] w-full max-w-xs mx-auto"
                 style={bgStyle}
@@ -169,7 +169,7 @@ export function LivePreviewScreen({ photoUrl, options, onBack, onGenerate }: Pro
                   Back
                 </Btn>
                 <Btn onClick={onGenerate} className="flex-1">
-                  Generate Layout
+                  Make Print Sheet
                 </Btn>
               </div>
             </div>

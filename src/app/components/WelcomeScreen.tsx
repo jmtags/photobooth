@@ -57,10 +57,10 @@ export function WelcomeScreen({ onStart, onAdmin }: Props) {
 
         <div className="flex flex-col gap-3">
           <h1 className="text-3xl font-extrabold text-[#0F172A] leading-tight">
-            Professional ID Photos<br />in Minutes
+            Tap. Smile.<br />Print.
           </h1>
           <p className="text-base text-[#64748B] leading-relaxed">
-            Take your photo, customize it,<br />and print instantly.
+            We will help you make<br />your ID photo.
           </p>
         </div>
 
@@ -69,15 +69,15 @@ export function WelcomeScreen({ onStart, onAdmin }: Props) {
             <circle cx="10" cy="10" r="9" stroke="white" strokeWidth="1.5" />
             <path d="M8 7L13 10L8 13" fill="white" />
           </svg>
-          Get Started
+          Start
         </Btn>
       </div>
 
       {/* Feature chips */}
       <div className="w-full max-w-lg mx-auto px-6 pb-8 flex gap-3">
-        <FeatureChip icon="fast" label="Fast Process" />
-        <FeatureChip icon="quality" label="Professional Quality" />
-        <FeatureChip icon="print" label="Instant Printing" />
+        <FeatureChip icon="fast" label="Take Photo" />
+        <FeatureChip icon="quality" label="Pick Style" />
+        <FeatureChip icon="print" label="Print" />
       </div>
     </Screen>
   );

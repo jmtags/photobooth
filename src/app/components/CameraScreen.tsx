@@ -131,7 +131,7 @@ export function CameraScreen({ onBack, onCapture }: Props) {
   return (
     <div className="min-h-screen bg-black flex flex-col font-[Inter,sans-serif]">
       <div className="absolute top-0 left-0 right-0 z-10">
-        <NavHeader onBack={onBack} title="Take Photo" step={2} totalSteps={7} />
+        <NavHeader onBack={onBack} title="Take Photo" step={0} totalSteps={5} />
       </div>
 
       {/* Camera preview */}

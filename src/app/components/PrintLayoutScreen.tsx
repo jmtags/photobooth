@@ -120,7 +120,7 @@ export function PrintLayoutScreen({ photoUrl, options, onBack, onPrint }: Props)
 
   return (
     <Screen>
-      <NavHeader onBack={onBack} title="Print Layout" step={6} totalSteps={7} />
+      <NavHeader onBack={onBack} title="Print Sheet" step={4} totalSteps={5} />
 
       <div className="flex-1 flex flex-col items-center px-4 py-6 gap-4 overflow-hidden">
         {/* Paper info bar */}
@@ -182,7 +182,7 @@ export function PrintLayoutScreen({ photoUrl, options, onBack, onPrint }: Props)
 
           <div className="flex gap-3 flex-1">
             <Btn variant="secondary" onClick={onBack} className="flex-1">
-              Edit
+              Back
             </Btn>
             <Btn onClick={onPrint} className="flex-1">
               Print

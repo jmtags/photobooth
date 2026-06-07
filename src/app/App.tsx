@@ -96,13 +96,13 @@ export default function App() {
   return (
     <div className="w-full min-h-screen font-[Inter,sans-serif]">
       {screen === "welcome" && (
-        <WelcomeScreen onStart={() => go("instructions")} onAdmin={() => go("admin")} />
+        <WelcomeScreen onStart={() => go("camera")} onAdmin={() => go("admin")} />
       )}
       {screen === "instructions" && (
         <InstructionsScreen onBack={() => go("welcome")} onContinue={() => go("camera")} />
       )}
       {screen === "camera" && (
-        <CameraScreen onBack={() => go("instructions")} onCapture={handleCapture} />
+        <CameraScreen onBack={() => go("welcome")} onCapture={handleCapture} />
       )}
       {screen === "review" && photoUrl && (
         <PhotoReviewScreen

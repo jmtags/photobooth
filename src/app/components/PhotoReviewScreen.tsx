@@ -10,12 +10,12 @@ interface Props {
 export function PhotoReviewScreen({ photoUrl, onRetake, onAccept }: Props) {
   return (
     <Screen>
-      <NavHeader onBack={onRetake} title="Review Photo" step={3} totalSteps={7} />
+      <NavHeader onBack={onRetake} title="Check Photo" step={1} totalSteps={5} />
 
       <div className="flex-1 flex flex-col items-center px-6 py-8 gap-6 max-w-md mx-auto w-full">
         <div className="flex flex-col gap-2 text-center">
-          <h2 className="text-xl font-bold text-[#0F172A]">How does this look?</h2>
-          <p className="text-sm text-[#64748B]">Make sure your face is clear and well-lit</p>
+          <h2 className="text-xl font-bold text-[#0F172A]">Do you like this photo?</h2>
+          <p className="text-sm text-[#64748B]">Your face should be clear.</p>
         </div>
 
         {/* Photo preview */}
@@ -35,12 +35,11 @@ export function PhotoReviewScreen({ photoUrl, onRetake, onAccept }: Props) {
 
         {/* Checklist */}
         <div className="w-full bg-white rounded-2xl border border-[#E2E8F0] p-4 shadow-sm">
-          <p className="text-sm font-semibold text-[#0F172A] mb-3">Check before continuing:</p>
+          <p className="text-sm font-semibold text-[#0F172A] mb-3">Quick check</p>
           {[
-            "Face is clearly visible",
-            "Good lighting, no shadows",
-            "Neutral background",
-            "Eyes open and looking forward",
+            "I can see my face",
+            "My eyes are open",
+            "The photo is not blurry",
           ].map((item) => (
             <div key={item} className="flex items-center gap-3 py-2 border-b border-[#F8FAFC] last:border-0">
               <div className="w-5 h-5 rounded-full bg-[#22C55E] flex items-center justify-center flex-shrink-0">
@@ -58,7 +57,7 @@ export function PhotoReviewScreen({ photoUrl, onRetake, onAccept }: Props) {
           </Btn>
           <Btn onClick={onAccept} className="flex-1">
             <Check size={16} />
-            Use This Photo
+            Yes, Use This
           </Btn>
         </div>
       </div>
