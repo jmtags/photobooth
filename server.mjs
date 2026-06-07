@@ -1,7 +1,7 @@
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
-import { processPhoto } from "./lib/photo-processing.mjs";
+import { PhotoProcessingError, processPhoto } from "./lib/photo-processing.mjs";
 
 const PORT = Number(process.env.API_PORT ?? 8787);
 const MAX_BODY_SIZE = 12 * 1024 * 1024;
@@ -79,8 +79,9 @@ const server = http.createServer(async (req, res) => {
       const processedPhotoUrl = await processPhoto(body);
       sendJson(res, 200, { processedPhotoUrl });
     } catch (err) {
-      sendJson(res, 500, {
+      sendJson(res, err instanceof PhotoProcessingError ? err.status : 500, {
         error: err instanceof Error ? err.message : "Photo processing failed.",
+        details: err instanceof PhotoProcessingError ? err.details : undefined,
       });
     }
     return;

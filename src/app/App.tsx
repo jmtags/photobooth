@@ -66,7 +66,10 @@ export default function App() {
         : { error: await response.text() };
 
       if (!response.ok) {
-        throw new Error(data.error ?? "Photo processing failed.");
+        const detailText = data.details?.openaiRequestId
+          ? ` Request ID: ${data.details.openaiRequestId}.`
+          : "";
+        throw new Error(`${data.error ?? "Photo processing failed."}${detailText}`);
       }
 
       if (!data.processedPhotoUrl) {
