@@ -298,6 +298,7 @@ export default function App() {
         {screen === "preview" && (
           <LivePreviewScreen
             photoUrl={processedPhotoUrl || photoUrl}
+            originalPhotoUrl={photoUrl}
             options={options}
             processNotice={processNotice}
             onBack={() => go("options")}
@@ -307,6 +308,7 @@ export default function App() {
         {screen === "layout" && (
           <PrintLayoutScreen
             photoUrl={processedPhotoUrl || photoUrl}
+            originalPhotoUrl={photoUrl}
             options={options}
             onBack={() => go("preview")}
             onPrint={() => go("printing")}

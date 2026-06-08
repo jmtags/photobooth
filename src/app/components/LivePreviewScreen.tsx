@@ -1,9 +1,11 @@
 import { Screen, Btn, NavHeader, Card } from "./ui";
 import type { PhotoOptions } from "./PhotoOptionsScreen";
 import { Check, ImageIcon } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface Props {
   photoUrl: string;
+  originalPhotoUrl?: string;
   options: PhotoOptions;
   processNotice?: string | null;
   onBack: () => void;
@@ -37,7 +39,20 @@ const bgColors: Record<PhotoOptions["background"], string> = {
   removed: "repeating-conic-gradient(#E2E8F0 0% 25%, white 0% 50%) 0 0 / 16px 16px",
 };
 
-export function LivePreviewScreen({ photoUrl, options, processNotice, onBack, onGenerate }: Props) {
+export function LivePreviewScreen({
+  photoUrl,
+  originalPhotoUrl,
+  options,
+  processNotice,
+  onBack,
+  onGenerate,
+}: Props) {
+  const [displayPhotoUrl, setDisplayPhotoUrl] = useState(photoUrl);
+
+  useEffect(() => {
+    setDisplayPhotoUrl(photoUrl);
+  }, [photoUrl]);
+
   const bgStyle =
     options.background === "removed"
       ? { background: bgColors.removed }
@@ -67,9 +82,14 @@ export function LivePreviewScreen({ photoUrl, options, processNotice, onBack, on
                 style={bgStyle}
               >
                 <img
-                  src={photoUrl}
+                  src={displayPhotoUrl}
                   alt="Processed portrait"
                   className="w-full h-full object-cover"
+                  onError={() => {
+                    if (originalPhotoUrl && displayPhotoUrl !== originalPhotoUrl) {
+                      setDisplayPhotoUrl(originalPhotoUrl);
+                    }
+                  }}
                   style={{
                     filter: [
                       options.brightness ? "brightness(1.1) contrast(1.05)" : "",

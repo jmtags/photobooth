@@ -1,16 +1,35 @@
 import { Screen, Btn, NavHeader } from "./ui";
 import type { PhotoOptions } from "./PhotoOptionsScreen";
 import { ZoomIn, ZoomOut } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface Props {
   photoUrl: string;
+  originalPhotoUrl?: string;
   options: PhotoOptions;
   onBack: () => void;
   onPrint: () => void;
 }
 
-function PhotoTile({ url, w, h, bg }: { url: string; w: number; h: number; bg: PhotoOptions["background"] }) {
+function PhotoTile({
+  url,
+  originalUrl,
+  w,
+  h,
+  bg,
+}: {
+  url: string;
+  originalUrl?: string;
+  w: number;
+  h: number;
+  bg: PhotoOptions["background"];
+}) {
+  const [displayUrl, setDisplayUrl] = useState(url);
+
+  useEffect(() => {
+    setDisplayUrl(url);
+  }, [url]);
+
   const bgStyle =
     bg === "blue"
       ? { backgroundColor: "#2563EB" }
@@ -25,15 +44,20 @@ function PhotoTile({ url, w, h, bg }: { url: string; w: number; h: number; bg: P
       className="overflow-hidden border border-[#CBD5E1] flex-shrink-0"
     >
       <img
-        src={url}
+        src={displayUrl}
         alt="ID photo"
         className="w-full h-full object-cover object-[center_38%]"
+        onError={() => {
+          if (originalUrl && displayUrl !== originalUrl) {
+            setDisplayUrl(originalUrl);
+          }
+        }}
       />
     </div>
   );
 }
 
-export function PrintLayoutScreen({ photoUrl, options, onBack, onPrint }: Props) {
+export function PrintLayoutScreen({ photoUrl, originalPhotoUrl, options, onBack, onPrint }: Props) {
   const [zoom, setZoom] = useState(1);
 
   // A5 = 148 × 210 mm — render at 2.5px/mm → 370 × 525px
@@ -56,7 +80,7 @@ export function PrintLayoutScreen({ photoUrl, options, onBack, onPrint }: Props)
           {Array.from({ length: rows }, (_, r) => (
             <div key={r} className="flex gap-[4px]">
               {Array.from({ length: cols }, (_, c) => (
-                <PhotoTile key={c} url={photoUrl} w={tile2.w} h={tile2.h} bg={bg} />
+                <PhotoTile key={c} url={photoUrl} originalUrl={originalPhotoUrl} w={tile2.w} h={tile2.h} bg={bg} />
               ))}
             </div>
           ))}
@@ -71,7 +95,7 @@ export function PrintLayoutScreen({ photoUrl, options, onBack, onPrint }: Props)
           {Array.from({ length: rows }, (_, r) => (
             <div key={r} className="flex gap-[3px]">
               {Array.from({ length: cols }, (_, c) => (
-                <PhotoTile key={c} url={photoUrl} w={tile1.w} h={tile1.h} bg={bg} />
+                <PhotoTile key={c} url={photoUrl} originalUrl={originalPhotoUrl} w={tile1.w} h={tile1.h} bg={bg} />
               ))}
             </div>
           ))}
@@ -86,7 +110,7 @@ export function PrintLayoutScreen({ photoUrl, options, onBack, onPrint }: Props)
           {Array.from({ length: rows }, (_, r) => (
             <div key={r} className="flex gap-[4px]">
               {Array.from({ length: cols }, (_, c) => (
-                <PhotoTile key={c} url={photoUrl} w={tilePassport.w} h={tilePassport.h} bg={bg} />
+                <PhotoTile key={c} url={photoUrl} originalUrl={originalPhotoUrl} w={tilePassport.w} h={tilePassport.h} bg={bg} />
               ))}
             </div>
           ))}
@@ -97,22 +121,22 @@ export function PrintLayoutScreen({ photoUrl, options, onBack, onPrint }: Props)
     return (
       <div className="flex flex-col gap-[4px] items-center justify-center h-full">
         <div className="flex gap-[4px]">
-          <PhotoTile url={photoUrl} w={tile2.w} h={tile2.h} bg={bg} />
-          <PhotoTile url={photoUrl} w={tile2.w} h={tile2.h} bg={bg} />
+          <PhotoTile url={photoUrl} originalUrl={originalPhotoUrl} w={tile2.w} h={tile2.h} bg={bg} />
+          <PhotoTile url={photoUrl} originalUrl={originalPhotoUrl} w={tile2.w} h={tile2.h} bg={bg} />
         </div>
         <div className="flex gap-[4px]">
           {Array.from({ length: 4 }, (_, i) => (
-            <PhotoTile key={i} url={photoUrl} w={tile1.w} h={tile1.h} bg={bg} />
+            <PhotoTile key={i} url={photoUrl} originalUrl={originalPhotoUrl} w={tile1.w} h={tile1.h} bg={bg} />
           ))}
         </div>
         <div className="flex gap-[4px]">
           {Array.from({ length: 4 }, (_, i) => (
-            <PhotoTile key={i} url={photoUrl} w={tile1.w} h={tile1.h} bg={bg} />
+            <PhotoTile key={i} url={photoUrl} originalUrl={originalPhotoUrl} w={tile1.w} h={tile1.h} bg={bg} />
           ))}
         </div>
         <div className="flex gap-[4px]">
-          <PhotoTile url={photoUrl} w={tile2.w} h={tile2.h} bg={bg} />
-          <PhotoTile url={photoUrl} w={tile2.w} h={tile2.h} bg={bg} />
+          <PhotoTile url={photoUrl} originalUrl={originalPhotoUrl} w={tile2.w} h={tile2.h} bg={bg} />
+          <PhotoTile url={photoUrl} originalUrl={originalPhotoUrl} w={tile2.w} h={tile2.h} bg={bg} />
         </div>
       </div>
     );
