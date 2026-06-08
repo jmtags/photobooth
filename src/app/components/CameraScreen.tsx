@@ -139,111 +139,124 @@ export function CameraScreen({
 
   return (
     <div className="h-full min-h-full bg-black flex flex-col font-[Inter,sans-serif]">
-      <div className="absolute top-0 left-0 right-0 z-10">
+      <div className="relative z-10">
         <NavHeader onBack={onBack} title="Take Photo" step={0} totalSteps={5} />
       </div>
 
-      {/* Camera preview */}
-      <div className="relative flex-1 flex items-center justify-center overflow-hidden">
-        {error ? (
-          <div className="flex flex-col items-center gap-4 text-white px-8 text-center">
-            <Camera size={48} className="opacity-50" />
-            <p className="text-sm opacity-70">{error}</p>
-            <Btn onClick={() => startCamera(facing)} variant="secondary" size="sm">
-              Try Again
-            </Btn>
-          </div>
-        ) : (
-          <>
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-full object-cover"
-              style={{ transform: facing === "user" ? "scaleX(-1)" : "none" }}
-            />
-            {/* Overlay guide */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="relative w-56 h-72 md:w-72 md:h-96">
-                {/* Oval guide */}
-                <div className="absolute inset-0 border-4 border-white/60 rounded-full" />
-                {/* Corner brackets */}
-                <svg className="absolute inset-0 w-full h-full" viewBox="0 0 224 288">
-                  <path d="M0 40 L0 0 L40 0" stroke="#2563EB" strokeWidth="4" fill="none" strokeLinecap="round" />
-                  <path d="M184 0 L224 0 L224 40" stroke="#2563EB" strokeWidth="4" fill="none" strokeLinecap="round" />
-                  <path d="M0 248 L0 288 L40 288" stroke="#2563EB" strokeWidth="4" fill="none" strokeLinecap="round" />
-                  <path d="M184 288 L224 288 L224 248" stroke="#2563EB" strokeWidth="4" fill="none" strokeLinecap="round" />
-                </svg>
-                {/* Center crosshair */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4">
-                  <div className="absolute top-1/2 left-0 right-0 h-px bg-white/40" />
-                  <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/40" />
-                </div>
-              </div>
-              <div className="absolute bottom-28 left-0 right-0 flex justify-center">
-                <span className="bg-black/50 text-white text-xs px-3 py-1.5 rounded-full backdrop-blur-sm">
-                  {ready ? "Center your face in the guide" : "Starting camera..."}
-                </span>
-              </div>
-            </div>
-
-            {/* Countdown */}
-            {countdown !== null && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-24 h-24 rounded-full bg-black/60 flex items-center justify-center">
-                  <span className="text-white text-5xl font-bold">{countdown}</span>
-                </div>
-              </div>
-            )}
-
-            {kioskMode && !fullscreenActive && (
-              <div className="absolute right-4 top-24 z-20">
-                <Btn
-                  onClick={() => void onRequestFullscreen()}
-                  size="sm"
-                  className="rounded-full shadow-lg shadow-blue-900/20"
-                >
-                  <Maximize size={16} />
-                  Resume Fullscreen
+      <div className="flex-1 overflow-y-auto bg-black">
+        <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col gap-4 px-4 py-4 md:px-6 md:py-6 lg:flex-row lg:items-stretch lg:gap-6">
+          <div className="relative flex min-h-[22rem] flex-1 items-center justify-center overflow-hidden rounded-[28px] border border-white/10 bg-[#020617] shadow-2xl lg:min-h-[32rem]">
+            {error ? (
+              <div className="flex flex-col items-center gap-4 px-8 text-center text-white">
+                <Camera size={48} className="opacity-50" />
+                <p className="text-sm opacity-70">{error}</p>
+                <Btn onClick={() => startCamera(facing)} variant="secondary" size="sm">
+                  Try Again
                 </Btn>
               </div>
+            ) : (
+              <>
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="h-full w-full object-cover"
+                  style={{ transform: facing === "user" ? "scaleX(-1)" : "none" }}
+                />
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <div className="relative h-72 w-56 md:h-96 md:w-72">
+                    <div className="absolute inset-0 rounded-full border-4 border-white/60" />
+                    <svg className="absolute inset-0 h-full w-full" viewBox="0 0 224 288">
+                      <path d="M0 40 L0 0 L40 0" stroke="#2563EB" strokeWidth="4" fill="none" strokeLinecap="round" />
+                      <path d="M184 0 L224 0 L224 40" stroke="#2563EB" strokeWidth="4" fill="none" strokeLinecap="round" />
+                      <path d="M0 248 L0 288 L40 288" stroke="#2563EB" strokeWidth="4" fill="none" strokeLinecap="round" />
+                      <path d="M184 288 L224 288 L224 248" stroke="#2563EB" strokeWidth="4" fill="none" strokeLinecap="round" />
+                    </svg>
+                    <div className="absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2">
+                      <div className="absolute left-0 right-0 top-1/2 h-px bg-white/40" />
+                      <div className="absolute bottom-0 left-1/2 top-0 w-px bg-white/40" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="absolute bottom-5 left-4 right-4 flex justify-center">
+                  <span className="rounded-full bg-black/55 px-3 py-1.5 text-xs text-white backdrop-blur-sm">
+                    {ready ? "Center your face in the guide" : "Starting camera..."}
+                  </span>
+                </div>
+
+                {countdown !== null && (
+                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                    <div className="flex h-24 w-24 items-center justify-center rounded-full bg-black/60">
+                      <span className="text-5xl font-bold text-white">{countdown}</span>
+                    </div>
+                  </div>
+                )}
+
+                {kioskMode && !fullscreenActive && (
+                  <div className="absolute right-4 top-4 z-20">
+                    <Btn
+                      onClick={() => void onRequestFullscreen()}
+                      size="sm"
+                      className="rounded-full shadow-lg shadow-blue-900/20"
+                    >
+                      <Maximize size={16} />
+                      Resume Fullscreen
+                    </Btn>
+                  </div>
+                )}
+              </>
             )}
-          </>
-        )}
-      </div>
-
-      {/* Controls */}
-      <div className="bg-black/90 px-6 pt-4 pb-8 flex items-center justify-between gap-4">
-        <button
-          type="button"
-          onClick={handleSwitch}
-          className="w-14 h-14 rounded-full border border-white/20 flex items-center justify-center text-white hover:bg-white/10 transition-colors"
-          aria-label="Switch camera"
-        >
-          <SwitchCamera size={22} />
-        </button>
-
-        <button
-          type="button"
-          onClick={handleCapture}
-          disabled={!ready || countdown !== null}
-          className="w-20 h-20 rounded-full bg-white flex items-center justify-center shadow-lg active:scale-95 transition-all disabled:opacity-50"
-          aria-label="Capture photo"
-        >
-          <div className="w-16 h-16 rounded-full border-4 border-[#2563EB] flex items-center justify-center">
-            <Camera size={28} color="#2563EB" />
           </div>
-        </button>
 
-        <button
-          type="button"
-          onClick={doCapture}
-          className="w-14 h-14 rounded-full border border-white/20 flex items-center justify-center text-white hover:bg-white/10 transition-colors"
-          aria-label="Capture now"
-        >
-          <RotateCcw size={22} />
-        </button>
+          <div className="flex w-full flex-col gap-4 rounded-[28px] bg-black/90 p-4 text-white lg:w-[20rem] lg:flex-shrink-0 lg:justify-between">
+            <div className="flex flex-col gap-3">
+              <p className="text-lg font-semibold">Camera Controls</p>
+              <p className="text-sm text-white/65">
+                Landscape mode now keeps the preview contained so the action buttons stay visible on tablets and PCs.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between gap-4 lg:flex-col lg:items-stretch">
+              <button
+                type="button"
+                onClick={handleSwitch}
+                className="flex h-14 w-14 items-center justify-center rounded-full border border-white/20 text-white transition-colors hover:bg-white/10 lg:h-16 lg:w-full lg:rounded-2xl"
+                aria-label="Switch camera"
+              >
+                <span className="flex items-center gap-2 lg:text-sm lg:font-semibold">
+                  <SwitchCamera size={22} />
+                  <span className="hidden lg:inline">Switch</span>
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCapture}
+                disabled={!ready || countdown !== null}
+                className="flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-lg transition-all active:scale-95 disabled:opacity-50 lg:h-28 lg:w-full lg:rounded-[28px]"
+                aria-label="Capture photo"
+              >
+                <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-[#2563EB] lg:h-20 lg:w-20">
+                  <Camera size={28} color="#2563EB" />
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={doCapture}
+                className="flex h-14 w-14 items-center justify-center rounded-full border border-white/20 text-white transition-colors hover:bg-white/10 lg:h-16 lg:w-full lg:rounded-2xl"
+                aria-label="Capture now"
+              >
+                <span className="flex items-center gap-2 lg:text-sm lg:font-semibold">
+                  <RotateCcw size={22} />
+                  <span className="hidden lg:inline">Instant</span>
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <canvas ref={canvasRef} className="hidden" />
