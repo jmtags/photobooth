@@ -42,6 +42,15 @@ const defaultOptions: PhotoOptions = {
 
 const displaySettingsKey = "photobooth-display-settings";
 
+type FullscreenDocument = Document & {
+  webkitExitFullscreen?: () => Promise<void> | void;
+  webkitFullscreenElement?: Element | null;
+};
+
+type FullscreenElement = HTMLElement & {
+  webkitRequestFullscreen?: () => Promise<void> | void;
+};
+
 export default function App() {
   const [screen, setScreen] = useState<Screen>("welcome");
   const [photoUrl, setPhotoUrl] = useState<string>("");
@@ -57,7 +66,12 @@ export default function App() {
     typeof window === "undefined" ? 1280 : window.innerWidth
   );
   const [fullscreenActive, setFullscreenActive] = useState(
-    typeof document === "undefined" ? false : Boolean(document.fullscreenElement)
+    typeof document === "undefined"
+      ? false
+      : Boolean(
+          (document as FullscreenDocument).fullscreenElement ??
+            (document as FullscreenDocument).webkitFullscreenElement
+        )
   );
 
   const go = (s: Screen) => setScreen(s);
@@ -95,17 +109,20 @@ export default function App() {
 
     const handleResize = () => setViewportWidth(window.innerWidth);
     const handleFullscreenChange = () => {
-      setFullscreenActive(Boolean(document.fullscreenElement));
+      const doc = document as FullscreenDocument;
+      setFullscreenActive(Boolean(doc.fullscreenElement ?? doc.webkitFullscreenElement));
     };
 
     handleResize();
     handleFullscreenChange();
     window.addEventListener("resize", handleResize);
     document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange as EventListener);
 
     return () => {
       window.removeEventListener("resize", handleResize);
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange as EventListener);
     };
   }, []);
 
@@ -118,25 +135,43 @@ export default function App() {
   const requestFullscreen = useCallback(async () => {
     if (typeof document === "undefined") return;
 
+    const root = document.documentElement as FullscreenElement;
+
     try {
-      await document.documentElement.requestFullscreen({ navigationUI: "hide" });
+      if (root.requestFullscreen) {
+        await root.requestFullscreen({ navigationUI: "hide" });
+        return;
+      }
+      if (root.webkitRequestFullscreen) {
+        await root.webkitRequestFullscreen();
+      }
     } catch {
       // Some browsers only partially support fullscreen controls.
     }
   }, []);
 
   const exitFullscreen = useCallback(async () => {
-    if (typeof document === "undefined" || !document.fullscreenElement) return;
+    if (typeof document === "undefined") return;
+
+    const doc = document as FullscreenDocument;
+    if (!doc.fullscreenElement && !doc.webkitFullscreenElement) return;
 
     try {
-      await document.exitFullscreen();
+      if (doc.exitFullscreen) {
+        await doc.exitFullscreen();
+        return;
+      }
+      if (doc.webkitExitFullscreen) {
+        await doc.webkitExitFullscreen();
+      }
     } catch {
       // Ignore failed exits.
     }
   }, []);
 
   const toggleFullscreen = useCallback(async () => {
-    if (document.fullscreenElement) {
+    const doc = document as FullscreenDocument;
+    if (doc.fullscreenElement ?? doc.webkitFullscreenElement) {
       await exitFullscreen();
       return;
     }
@@ -226,7 +261,13 @@ export default function App() {
           <InstructionsScreen onBack={() => go("welcome")} onContinue={() => go("camera")} />
         )}
         {screen === "camera" && (
-          <CameraScreen onBack={() => go("welcome")} onCapture={handleCapture} />
+          <CameraScreen
+            onBack={() => go("welcome")}
+            onCapture={handleCapture}
+            kioskMode={displaySettings.kioskMode}
+            fullscreenActive={fullscreenActive}
+            onRequestFullscreen={toggleFullscreen}
+          />
         )}
         {screen === "review" && photoUrl && (
           <PhotoReviewScreen

@@ -1,13 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 import { NavHeader, Btn } from "./ui";
-import { Camera, RotateCcw, SwitchCamera } from "lucide-react";
+import { Camera, Maximize, RotateCcw, SwitchCamera } from "lucide-react";
 
 interface Props {
   onBack: () => void;
   onCapture: (dataUrl: string) => void;
+  kioskMode: boolean;
+  fullscreenActive: boolean;
+  onRequestFullscreen: () => void | Promise<void>;
 }
 
-export function CameraScreen({ onBack, onCapture }: Props) {
+export function CameraScreen({
+  onBack,
+  onCapture,
+  kioskMode,
+  fullscreenActive,
+  onRequestFullscreen,
+}: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -185,6 +194,19 @@ export function CameraScreen({ onBack, onCapture }: Props) {
                 <div className="w-24 h-24 rounded-full bg-black/60 flex items-center justify-center">
                   <span className="text-white text-5xl font-bold">{countdown}</span>
                 </div>
+              </div>
+            )}
+
+            {kioskMode && !fullscreenActive && (
+              <div className="absolute right-4 top-24 z-20">
+                <Btn
+                  onClick={() => void onRequestFullscreen()}
+                  size="sm"
+                  className="rounded-full shadow-lg shadow-blue-900/20"
+                >
+                  <Maximize size={16} />
+                  Resume Fullscreen
+                </Btn>
               </div>
             )}
           </>
