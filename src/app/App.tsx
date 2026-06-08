@@ -139,7 +139,11 @@ export default function App() {
 
     try {
       if (root.requestFullscreen) {
-        await root.requestFullscreen({ navigationUI: "hide" });
+        try {
+          await root.requestFullscreen({ navigationUI: "hide" });
+        } catch {
+          await root.requestFullscreen();
+        }
         return;
       }
       if (root.webkitRequestFullscreen) {
@@ -328,7 +332,9 @@ export default function App() {
         <button
           type="button"
           onClick={() => void toggleFullscreen()}
-          className="fixed right-3 top-3 z-50 inline-flex items-center gap-2 rounded-full bg-black/70 px-3 py-2 text-xs font-semibold text-white backdrop-blur-sm"
+          className={`fixed z-50 inline-flex items-center gap-2 rounded-full bg-black/70 px-3 py-2 text-xs font-semibold text-white backdrop-blur-sm ${
+            screen === "welcome" ? "bottom-4 right-4" : "right-3 top-3"
+          }`}
         >
           <Minimize size={14} />
           Show Browser
@@ -339,7 +345,9 @@ export default function App() {
         <button
           type="button"
           onClick={() => void toggleFullscreen()}
-          className="fixed right-3 top-3 z-50 inline-flex items-center gap-2 rounded-full bg-[#2563EB] px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-blue-900/20"
+          className={`fixed z-50 inline-flex items-center gap-2 rounded-full bg-[#2563EB] px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-blue-900/20 ${
+            screen === "welcome" ? "bottom-4 right-4" : "right-3 top-3"
+          }`}
         >
           <Maximize size={14} />
           Fullscreen
