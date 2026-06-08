@@ -100,7 +100,7 @@ export function StepIndicator({ current, total }: { current: number; total: numb
 export function Screen({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <div
-      className={`min-h-screen bg-[#F8FAFC] flex flex-col font-[Inter,sans-serif] ${className}`}
+      className={`h-full min-h-full bg-[#F8FAFC] flex flex-col font-[Inter,sans-serif] ${className}`}
     >
       {children}
     </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, StatusBadge, Btn } from "./ui";
 import {
   LayoutDashboard,
@@ -14,6 +14,11 @@ import {
   X,
   LogOut,
   ChevronRight,
+  MonitorSmartphone,
+  TabletSmartphone,
+  Maximize,
+  Minimize,
+  ScanFace,
 } from "lucide-react";
 import {
   AreaChart,
@@ -38,11 +43,11 @@ const chartData = [
 ];
 
 const orders = [
-  { id: "#1042", customer: "John D.", size: "2×2", time: "3:42 PM", status: "done" as const },
+  { id: "#1042", customer: "John D.", size: "2x2", time: "3:42 PM", status: "done" as const },
   { id: "#1041", customer: "Sarah M.", size: "Passport", time: "3:28 PM", status: "done" as const },
   { id: "#1040", customer: "Mike R.", size: "Mixed", time: "3:15 PM", status: "active" as const },
-  { id: "#1039", customer: "Lisa K.", size: "1×1", time: "2:58 PM", status: "done" as const },
-  { id: "#1038", customer: "Tom W.", size: "2×2", time: "2:44 PM", status: "done" as const },
+  { id: "#1039", customer: "Lisa K.", size: "1x1", time: "2:58 PM", status: "done" as const },
+  { id: "#1038", customer: "Tom W.", size: "2x2", time: "2:44 PM", status: "done" as const },
   { id: "#1037", customer: "Anna B.", size: "Passport", time: "2:30 PM", status: "pending" as const },
 ];
 
@@ -56,17 +61,41 @@ const navItems = [
 
 interface Props {
   onExit: () => void;
+  layoutMode: "auto" | "portrait" | "landscape";
+  onLayoutModeChange: (mode: "auto" | "portrait" | "landscape") => void;
+  kioskMode: boolean;
+  fullscreenActive: boolean;
+  onToggleKioskMode: () => void;
+  onToggleFullscreen: () => void;
 }
 
-export function AdminDashboard({ onExit }: Props) {
+export function AdminDashboard({
+  onExit,
+  layoutMode,
+  onLayoutModeChange,
+  kioskMode,
+  fullscreenActive,
+  onToggleKioskMode,
+  onToggleFullscreen,
+}: Props) {
   const [activeNav, setActiveNav] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const todayLabel = useMemo(
+    () =>
+      new Intl.DateTimeFormat("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      }).format(new Date()),
+    []
+  );
 
   const widgets = [
     { label: "Customers Today", value: "47", icon: Users, color: "#2563EB", bg: "#EFF6FF", change: "+12%" },
     { label: "Total Prints Today", value: "184", icon: Printer, color: "#22C55E", bg: "#F0FDF4", change: "+8%" },
     { label: "Revenue Today", value: "$368", icon: DollarSign, color: "#F59E0B", bg: "#FFFBEB", change: "+15%" },
-    { label: "Most Popular Size", value: "2×2", icon: Star, color: "#8B5CF6", bg: "#F5F3FF", change: "Passport #2" },
+    { label: "Most Popular Size", value: "2x2", icon: Star, color: "#8B5CF6", bg: "#F5F3FF", change: "Passport #2" },
   ];
 
   const Sidebar = ({ mobile = false }: { mobile?: boolean }) => (
@@ -75,7 +104,6 @@ export function AdminDashboard({ onExit }: Props) {
         mobile ? "w-full" : "w-64 hidden md:flex"
       } flex-col bg-white border-r border-[#E2E8F0] h-full flex-shrink-0`}
     >
-      {/* Logo area */}
       <div className="flex items-center justify-between px-5 py-5 border-b border-[#E2E8F0]">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-[#2563EB] rounded-xl flex items-center justify-center">
@@ -98,7 +126,6 @@ export function AdminDashboard({ onExit }: Props) {
         )}
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 py-4 px-3">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -125,7 +152,6 @@ export function AdminDashboard({ onExit }: Props) {
         })}
       </nav>
 
-      {/* Exit */}
       <div className="p-4 border-t border-[#E2E8F0]">
         <button
           type="button"
@@ -140,11 +166,9 @@ export function AdminDashboard({ onExit }: Props) {
   );
 
   return (
-    <div className="h-screen flex bg-[#F8FAFC] font-[Inter,sans-serif] overflow-hidden">
-      {/* Desktop sidebar */}
+    <div className="h-full flex bg-[#F8FAFC] font-[Inter,sans-serif] overflow-hidden">
       <Sidebar />
 
-      {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div
@@ -157,9 +181,7 @@ export function AdminDashboard({ onExit }: Props) {
         </div>
       )}
 
-      {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top bar */}
         <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-[#E2E8F0] flex-shrink-0">
           <div className="flex items-center gap-3">
             <button
@@ -171,7 +193,7 @@ export function AdminDashboard({ onExit }: Props) {
             </button>
             <div>
               <h1 className="font-bold text-[#0F172A] text-lg capitalize">{activeNav}</h1>
-              <p className="text-xs text-[#64748B]">Saturday, June 6, 2026</p>
+              <p className="text-xs text-[#64748B]">{todayLabel}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -185,11 +207,9 @@ export function AdminDashboard({ onExit }: Props) {
           </div>
         </div>
 
-        {/* Dashboard content */}
         <div className="flex-1 overflow-y-auto p-6">
           {activeNav === "dashboard" && (
             <div className="flex flex-col gap-6 max-w-5xl">
-              {/* Widgets */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {widgets.map((w) => {
                   const Icon = w.icon;
@@ -211,7 +231,6 @@ export function AdminDashboard({ onExit }: Props) {
                 })}
               </div>
 
-              {/* Chart */}
               <Card className="p-5">
                 <div className="flex items-center justify-between mb-4">
                   <div>
@@ -249,7 +268,6 @@ export function AdminDashboard({ onExit }: Props) {
                 </ResponsiveContainer>
               </Card>
 
-              {/* Recent orders */}
               <Card className="p-5">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-bold text-[#0F172A]">Recent Orders</h3>
@@ -285,7 +303,127 @@ export function AdminDashboard({ onExit }: Props) {
             </div>
           )}
 
-          {activeNav !== "dashboard" && (
+          {activeNav === "settings" && (
+            <div className="flex flex-col gap-6 max-w-4xl">
+              <Card className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center">
+                    <MonitorSmartphone size={22} color="#2563EB" />
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="text-xl font-bold text-[#0F172A]">Display Settings</h2>
+                    <p className="text-sm text-[#64748B] mt-1">
+                      Choose how the kiosk frames itself for phones, tablets, and PCs.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-6">
+                  {[
+                    {
+                      id: "auto" as const,
+                      title: "Auto",
+                      desc: "Portrait on phones, landscape on tablets and desktops.",
+                    },
+                    {
+                      id: "portrait" as const,
+                      title: "Portrait",
+                      desc: "Always use a vertical phone-style layout.",
+                    },
+                    {
+                      id: "landscape" as const,
+                      title: "Landscape",
+                      desc: "Always use a wider tablet or PC layout.",
+                    },
+                  ].map((option) => {
+                    const active = layoutMode === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => onLayoutModeChange(option.id)}
+                        className={`rounded-2xl border p-4 text-left transition-all ${
+                          active
+                            ? "border-[#2563EB] bg-blue-50 shadow-sm"
+                            : "border-[#E2E8F0] bg-white hover:border-[#93C5FD]"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <TabletSmartphone size={18} color={active ? "#2563EB" : "#64748B"} />
+                          <span className={`font-semibold ${active ? "text-[#2563EB]" : "text-[#0F172A]"}`}>
+                            {option.title}
+                          </span>
+                        </div>
+                        <p className="text-sm text-[#64748B] mt-2">{option.desc}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </Card>
+
+              <Card className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center">
+                    <Maximize size={22} color="#22C55E" />
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="text-xl font-bold text-[#0F172A]">Kiosk Fullscreen</h2>
+                    <p className="text-sm text-[#64748B] mt-1">
+                      Hide the browser chrome while the kiosk is running. The floating button exits fullscreen and brings the browser back.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex flex-col gap-3">
+                  <button
+                    type="button"
+                    onClick={onToggleKioskMode}
+                    className={`flex items-center justify-between rounded-2xl border px-4 py-4 transition-all ${
+                      kioskMode ? "border-green-200 bg-green-50" : "border-[#E2E8F0] bg-white"
+                    }`}
+                  >
+                    <div className="text-left">
+                      <p className="font-semibold text-[#0F172A]">Kiosk Mode</p>
+                      <p className="text-sm text-[#64748B] mt-1">
+                        {kioskMode ? "Fullscreen is preferred while serving customers." : "Use a normal browser window."}
+                      </p>
+                    </div>
+                    <span className={`text-sm font-semibold ${kioskMode ? "text-[#22C55E]" : "text-[#64748B]"}`}>
+                      {kioskMode ? "On" : "Off"}
+                    </span>
+                  </button>
+
+                  <Btn
+                    onClick={onToggleFullscreen}
+                    variant={fullscreenActive ? "secondary" : "primary"}
+                    className="w-full justify-center"
+                  >
+                    {fullscreenActive ? <Minimize size={18} /> : <Maximize size={18} />}
+                    {fullscreenActive ? "Show Browser" : "Enter Fullscreen"}
+                  </Btn>
+                </div>
+              </Card>
+
+              <Card className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center">
+                    <ScanFace size={22} color="#F59E0B" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-[#0F172A]">Face Protection</h2>
+                    <p className="text-sm text-[#64748B] mt-1">
+                      Photo generation is now instructed to keep the original face, expression, and head position unchanged.
+                    </p>
+                    <p className="text-sm text-[#64748B] mt-3">
+                      Background and clothing edits can still happen, but the face should stay much closer to the captured photo.
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {activeNav !== "dashboard" && activeNav !== "settings" && (
             <div className="flex flex-col items-center justify-center h-64 gap-4">
               <div className="w-16 h-16 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-center">
                 {(() => {
