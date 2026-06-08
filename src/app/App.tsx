@@ -58,6 +58,7 @@ export default function App() {
   const [options, setOptions] = useState<PhotoOptions>(defaultOptions);
   const [processing, setProcessing] = useState(false);
   const [processError, setProcessError] = useState<string | null>(null);
+  const [processNotice, setProcessNotice] = useState<string | null>(null);
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings>({
     layoutMode: "auto",
     kioskMode: false,
@@ -201,12 +202,14 @@ export default function App() {
     setPhotoUrl(url);
     setProcessedPhotoUrl("");
     setProcessError(null);
+    setProcessNotice(null);
     go("review");
   }, []);
 
   const handlePreview = async () => {
     setProcessing(true);
     setProcessError(null);
+    setProcessNotice(null);
 
     try {
       const response = await fetch("/api/process-photo", {
@@ -232,6 +235,7 @@ export default function App() {
       }
 
       setProcessedPhotoUrl(data.processedPhotoUrl);
+      setProcessNotice(typeof data.notice === "string" ? data.notice : null);
       go("preview");
     } catch (err) {
       setProcessError(err instanceof Error ? err.message : "Photo processing failed.");
@@ -245,6 +249,7 @@ export default function App() {
     setProcessedPhotoUrl("");
     setOptions(defaultOptions);
     setProcessError(null);
+    setProcessNotice(null);
     go("welcome");
   };
 
@@ -294,6 +299,7 @@ export default function App() {
           <LivePreviewScreen
             photoUrl={processedPhotoUrl || photoUrl}
             options={options}
+            processNotice={processNotice}
             onBack={() => go("options")}
             onGenerate={() => go("layout")}
           />

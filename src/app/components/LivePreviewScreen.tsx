@@ -5,6 +5,7 @@ import { Check, ImageIcon } from "lucide-react";
 interface Props {
   photoUrl: string;
   options: PhotoOptions;
+  processNotice?: string | null;
   onBack: () => void;
   onGenerate: () => void;
 }
@@ -36,7 +37,7 @@ const bgColors: Record<PhotoOptions["background"], string> = {
   removed: "repeating-conic-gradient(#E2E8F0 0% 25%, white 0% 50%) 0 0 / 16px 16px",
 };
 
-export function LivePreviewScreen({ photoUrl, options, onBack, onGenerate }: Props) {
+export function LivePreviewScreen({ photoUrl, options, processNotice, onBack, onGenerate }: Props) {
   const bgStyle =
     options.background === "removed"
       ? { background: bgColors.removed }
@@ -52,6 +53,11 @@ export function LivePreviewScreen({ photoUrl, options, onBack, onGenerate }: Pro
 
       <div className="flex-1 overflow-y-auto px-4 md:px-6 py-6">
         <div className="max-w-3xl mx-auto">
+          {processNotice && (
+            <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              {processNotice}
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Left: processed photo */}
             <div className="flex flex-col gap-4">

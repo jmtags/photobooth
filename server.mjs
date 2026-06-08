@@ -76,8 +76,8 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && req.url === "/api/process-photo") {
     try {
       const body = await readJsonBody(req);
-      const processedPhotoUrl = await processPhoto(body);
-      sendJson(res, 200, { processedPhotoUrl });
+      const result = await processPhoto(body);
+      sendJson(res, 200, result);
     } catch (err) {
       sendJson(res, err instanceof PhotoProcessingError ? err.status : 500, {
         error: err instanceof Error ? err.message : "Photo processing failed.",
