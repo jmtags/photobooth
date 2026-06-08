@@ -252,7 +252,7 @@ export default function App() {
     <div className="w-full min-h-[100dvh] bg-[#0F172A] font-[Inter,sans-serif]">
       <div
         data-layout={effectiveLayout}
-        className={`mx-auto h-[100dvh] overflow-hidden bg-[#F8FAFC] ${
+        className={`mx-auto h-[100dvh] overflow-x-hidden overflow-y-auto bg-[#F8FAFC] ${
           effectiveLayout === "portrait"
             ? "w-full max-w-[32rem] shadow-[0_0_0_1px_rgba(148,163,184,0.2),0_24px_80px_rgba(15,23,42,0.35)]"
             : "w-full"
