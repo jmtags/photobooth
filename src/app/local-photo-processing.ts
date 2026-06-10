@@ -214,27 +214,64 @@ function refineAlphaMask(alphaMask: Uint8ClampedArray, width: number, height: nu
       let total = 0;
       let weightTotal = 0;
 
-      for (let offsetY = -2; offsetY <= 2; offsetY += 1) {
+      for (let offsetY = -3; offsetY <= 3; offsetY += 1) {
         const sampleY = y + offsetY;
         if (sampleY < 0 || sampleY >= height) continue;
 
-        for (let offsetX = -2; offsetX <= 2; offsetX += 1) {
+        for (let offsetX = -3; offsetX <= 3; offsetX += 1) {
           const sampleX = x + offsetX;
           if (sampleX < 0 || sampleX >= width) continue;
 
           const distance = Math.abs(offsetX) + Math.abs(offsetY);
-          const weight = distance === 0 ? 6 : distance === 1 ? 4 : distance === 2 ? 2 : 1;
+          const weight = distance === 0 ? 8 : distance === 1 ? 5 : distance <= 3 ? 2 : 1;
           total += cleanedMask[sampleY * width + sampleX] * weight;
           weightTotal += weight;
         }
       }
 
-      const smoothed = weightTotal > 0 ? total / weightTotal : cleanedMask[index];
-      refinedMask[index] = Math.max(0, Math.min(255, Math.round(smoothed)));
+      const feathered = weightTotal > 0 ? total / weightTotal : cleanedMask[index];
+      const sourceAlpha = alphaMask[index];
+      const softened = feathered > 16 && feathered < 240 ? feathered * 0.72 + sourceAlpha * 0.28 : feathered;
+      const normalized = Math.max(0, Math.min(1, softened / 255));
+      const smoothStep = normalized * normalized * (3 - 2 * normalized);
+      refinedMask[index] = Math.max(0, Math.min(255, Math.round(smoothStep * 255)));
     }
   }
 
   return refinedMask;
+}
+
+function resizeAlphaMask(alphaMask: Uint8ClampedArray, sourceWidth: number, sourceHeight: number, targetWidth: number, targetHeight: number) {
+  if (sourceWidth === targetWidth && sourceHeight === targetHeight) {
+    return alphaMask;
+  }
+
+  const resizedMask = new Uint8ClampedArray(targetWidth * targetHeight);
+
+  for (let y = 0; y < targetHeight; y += 1) {
+    const sourceY = (y + 0.5) * (sourceHeight / targetHeight) - 0.5;
+    const y0 = Math.max(0, Math.floor(sourceY));
+    const y1 = Math.min(sourceHeight - 1, y0 + 1);
+    const yWeight = sourceY - y0;
+
+    for (let x = 0; x < targetWidth; x += 1) {
+      const sourceX = (x + 0.5) * (sourceWidth / targetWidth) - 0.5;
+      const x0 = Math.max(0, Math.floor(sourceX));
+      const x1 = Math.min(sourceWidth - 1, x0 + 1);
+      const xWeight = sourceX - x0;
+
+      const top =
+        alphaMask[y0 * sourceWidth + x0] * (1 - xWeight) +
+        alphaMask[y0 * sourceWidth + x1] * xWeight;
+      const bottom =
+        alphaMask[y1 * sourceWidth + x0] * (1 - xWeight) +
+        alphaMask[y1 * sourceWidth + x1] * xWeight;
+
+      resizedMask[y * targetWidth + x] = Math.round(top * (1 - yWeight) + bottom * yWeight);
+    }
+  }
+
+  return resizedMask;
 }
 
 export async function processPhotoLocally({
@@ -258,8 +295,10 @@ export async function processPhotoLocally({
 
   const [segmenter, image] = await Promise.all([getSegmenter(), loadImage(photoUrl)]);
   const result = segmenter.segment(image);
-  const width = result.categoryMask?.width ?? result.confidenceMasks?.[0]?.width ?? image.naturalWidth;
-  const height = result.categoryMask?.height ?? result.confidenceMasks?.[0]?.height ?? image.naturalHeight;
+  const maskWidth = result.categoryMask?.width ?? result.confidenceMasks?.[0]?.width ?? image.naturalWidth;
+  const maskHeight = result.categoryMask?.height ?? result.confidenceMasks?.[0]?.height ?? image.naturalHeight;
+  const width = image.naturalWidth;
+  const height = image.naturalHeight;
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -278,13 +317,19 @@ export async function processPhotoLocally({
   const imageData = context.getImageData(0, 0, width, height);
   const pixels = imageData.data;
   const personMask = getPersonMask(result);
-  const alphaMask = new Uint8ClampedArray(width * height);
+  const alphaMask = new Uint8ClampedArray(maskWidth * maskHeight);
 
-  for (let pixelIndex = 0; pixelIndex < width * height; pixelIndex += 1) {
+  for (let pixelIndex = 0; pixelIndex < maskWidth * maskHeight; pixelIndex += 1) {
     alphaMask[pixelIndex] = getPersonAlpha(personMask, pixelIndex);
   }
 
-  const refinedAlphaMask = refineAlphaMask(alphaMask, width, height);
+  const refinedAlphaMask = resizeAlphaMask(
+    refineAlphaMask(alphaMask, maskWidth, maskHeight),
+    maskWidth,
+    maskHeight,
+    width,
+    height
+  );
 
   for (let pixelIndex = 0; pixelIndex < width * height; pixelIndex += 1) {
     const alpha = refinedAlphaMask[pixelIndex] / 255;
