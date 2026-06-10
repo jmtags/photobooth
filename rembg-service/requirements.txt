@@ -1,4 +1,0 @@
-fastapi
-uvicorn[standard]
-rembg[cpu]==2.0.76
-pillow

@@ -11,6 +11,7 @@ import { PrintLayoutScreen } from "./components/PrintLayoutScreen";
 import { PrintingScreen } from "./components/PrintingScreen";
 import { SuccessScreen } from "./components/SuccessScreen";
 import { AdminDashboard } from "./components/AdminDashboard";
+import { processPhotoLocally } from "./local-photo-processing";
 
 type Screen =
   | "welcome"
@@ -41,19 +42,6 @@ const defaultOptions: PhotoOptions = {
 };
 
 const displaySettingsKey = "photobooth-display-settings";
-const photoApiUrl = (import.meta.env.VITE_PHOTO_API_URL ?? "").replace(/\/$/, "");
-
-function getProcessErrorMessage(data: unknown) {
-  if (!data || typeof data !== "object") {
-    return "Photo processing failed.";
-  }
-
-  const payload = data as { detail?: unknown; error?: unknown };
-  if (typeof payload.detail === "string") return payload.detail;
-  if (typeof payload.error === "string") return payload.error;
-  if (Array.isArray(payload.detail)) return "Photo processing request was invalid.";
-  return "Photo processing failed.";
-}
 
 type FullscreenDocument = Document & {
   webkitExitFullscreen?: () => Promise<void> | void;
@@ -225,27 +213,14 @@ export default function App() {
     setProcessNotice(null);
 
     try {
-      const response = await fetch(`${photoApiUrl}/api/process-photo`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ photoUrl, options }),
-      });
+      const result = await processPhotoLocally({ photoUrl, options });
 
-      const contentType = response.headers.get("content-type") ?? "";
-      const data = contentType.includes("application/json")
-        ? await response.json()
-        : { error: await response.text() };
-
-      if (!response.ok) {
-        throw new Error(getProcessErrorMessage(data));
-      }
-
-      if (!data.processedPhotoUrl) {
+      if (!result.processedPhotoUrl) {
         throw new Error("Photo processing did not return an image.");
       }
 
-      setProcessedPhotoUrl(data.processedPhotoUrl);
-      setProcessNotice(typeof data.notice === "string" ? data.notice : null);
+      setProcessedPhotoUrl(result.processedPhotoUrl);
+      setProcessNotice(typeof result.notice === "string" ? result.notice : null);
       go("preview");
     } catch (err) {
       setProcessError(err instanceof Error ? err.message : "Photo processing failed.");
