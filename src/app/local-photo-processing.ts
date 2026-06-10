@@ -29,6 +29,48 @@ type PersonMask =
       inverted: boolean;
     };
 
+type EdgeCleanup = NonNullable<PhotoOptions["edgeCleanup"]>;
+
+type CleanupProfile = {
+  threshold: number;
+  keepNeighbors: number;
+  tightenNeighbors: number;
+  featherRadius: number;
+  edgeSuppression: number;
+  decontaminate: number;
+};
+
+const cleanupProfiles: Record<EdgeCleanup, CleanupProfile> = {
+  natural: {
+    threshold: 108,
+    keepNeighbors: 4,
+    tightenNeighbors: 5,
+    featherRadius: 4,
+    edgeSuppression: 1.4,
+    decontaminate: 0.45,
+  },
+  clean: {
+    threshold: 132,
+    keepNeighbors: 5,
+    tightenNeighbors: 6,
+    featherRadius: 4,
+    edgeSuppression: 2.2,
+    decontaminate: 0.65,
+  },
+  strong: {
+    threshold: 154,
+    keepNeighbors: 6,
+    tightenNeighbors: 7,
+    featherRadius: 5,
+    edgeSuppression: 3,
+    decontaminate: 0.8,
+  },
+};
+
+function getCleanupProfile(edgeCleanup: PhotoOptions["edgeCleanup"] | undefined) {
+  return cleanupProfiles[edgeCleanup ?? "clean"];
+}
+
 function getSegmenter() {
   if (!segmenterPromise) {
     segmenterPromise = FilesetResolver.forVisionTasks(visionWasmUrl).then((vision) =>
@@ -263,14 +305,14 @@ function keepMainPersonComponents(binaryMask: Uint8ClampedArray, width: number, 
   return outputMask;
 }
 
-function refineAlphaMask(alphaMask: Uint8ClampedArray, width: number, height: number) {
+function refineAlphaMask(alphaMask: Uint8ClampedArray, width: number, height: number, profile: CleanupProfile) {
   const binaryMask = new Uint8ClampedArray(alphaMask.length);
   const cleanedMask = new Uint8ClampedArray(alphaMask.length);
   const tightenedMask = new Uint8ClampedArray(alphaMask.length);
   const refinedMask = new Uint8ClampedArray(alphaMask.length);
 
   for (let index = 0; index < alphaMask.length; index += 1) {
-    binaryMask[index] = alphaMask[index] >= 132 ? 255 : 0;
+    binaryMask[index] = alphaMask[index] >= profile.threshold ? 255 : 0;
   }
 
   for (let y = 0; y < height; y += 1) {
@@ -289,7 +331,7 @@ function refineAlphaMask(alphaMask: Uint8ClampedArray, width: number, height: nu
         }
       }
 
-      cleanedMask[index] = neighbors >= 5 ? 255 : 0;
+      cleanedMask[index] = neighbors >= profile.keepNeighbors ? 255 : 0;
     }
   }
 
@@ -311,7 +353,7 @@ function refineAlphaMask(alphaMask: Uint8ClampedArray, width: number, height: nu
         }
       }
 
-      tightenedMask[index] = neighbors >= 6 ? 255 : 0;
+      tightenedMask[index] = neighbors >= profile.tightenNeighbors ? 255 : 0;
     }
   }
 
@@ -321,11 +363,11 @@ function refineAlphaMask(alphaMask: Uint8ClampedArray, width: number, height: nu
       let total = 0;
       let weightTotal = 0;
 
-      for (let offsetY = -3; offsetY <= 3; offsetY += 1) {
+      for (let offsetY = -profile.featherRadius; offsetY <= profile.featherRadius; offsetY += 1) {
         const sampleY = y + offsetY;
         if (sampleY < 0 || sampleY >= height) continue;
 
-        for (let offsetX = -3; offsetX <= 3; offsetX += 1) {
+        for (let offsetX = -profile.featherRadius; offsetX <= profile.featherRadius; offsetX += 1) {
           const sampleX = x + offsetX;
           if (sampleX < 0 || sampleX >= width) continue;
 
@@ -341,7 +383,8 @@ function refineAlphaMask(alphaMask: Uint8ClampedArray, width: number, height: nu
       const softened = feathered > 16 && feathered < 240 ? feathered * 0.72 + sourceAlpha * 0.28 : feathered;
       const normalized = Math.max(0, Math.min(1, softened / 255));
       const smoothStep = normalized * normalized * (3 - 2 * normalized);
-      const residueSuppressed = smoothStep < 0.45 ? smoothStep * smoothStep * 2.2 : smoothStep;
+      const residueSuppressed =
+        smoothStep < 0.45 ? smoothStep * smoothStep * profile.edgeSuppression : smoothStep;
       refinedMask[index] = Math.max(0, Math.min(255, Math.round(residueSuppressed * 255)));
     }
   }
@@ -382,6 +425,55 @@ function resizeAlphaMask(alphaMask: Uint8ClampedArray, sourceWidth: number, sour
   return resizedMask;
 }
 
+function decontaminateEdgePixel(
+  pixels: Uint8ClampedArray,
+  alphaMask: Uint8ClampedArray,
+  pixelIndex: number,
+  width: number,
+  height: number,
+  strength: number
+) {
+  const alpha = alphaMask[pixelIndex];
+  if (alpha <= 20 || alpha >= 245) return null;
+
+  const x = pixelIndex % width;
+  const y = Math.floor(pixelIndex / width);
+  let red = 0;
+  let green = 0;
+  let blue = 0;
+  let count = 0;
+
+  for (let offsetY = -3; offsetY <= 3; offsetY += 1) {
+    const sampleY = y + offsetY;
+    if (sampleY < 0 || sampleY >= height) continue;
+
+    for (let offsetX = -3; offsetX <= 3; offsetX += 1) {
+      const sampleX = x + offsetX;
+      if (sampleX < 0 || sampleX >= width) continue;
+
+      const sampleIndex = sampleY * width + sampleX;
+      if (alphaMask[sampleIndex] < 238) continue;
+
+      const dataIndex = sampleIndex * 4;
+      red += pixels[dataIndex];
+      green += pixels[dataIndex + 1];
+      blue += pixels[dataIndex + 2];
+      count += 1;
+    }
+  }
+
+  if (count === 0) return null;
+
+  const edgeAmount = (1 - alpha / 255) * strength;
+  const dataIndex = pixelIndex * 4;
+
+  return {
+    red: pixels[dataIndex] * (1 - edgeAmount) + (red / count) * edgeAmount,
+    green: pixels[dataIndex + 1] * (1 - edgeAmount) + (green / count) * edgeAmount,
+    blue: pixels[dataIndex + 2] * (1 - edgeAmount) + (blue / count) * edgeAmount,
+  };
+}
+
 export async function processPhotoLocally({
   photoUrl,
   options,
@@ -418,6 +510,7 @@ export async function processPhotoLocally({
   }
 
   const [backgroundRed, backgroundGreen, backgroundBlue] = backgroundColors[options.background];
+  const cleanupProfile = getCleanupProfile(options.edgeCleanup);
   context.fillStyle = `rgb(${backgroundRed}, ${backgroundGreen}, ${backgroundBlue})`;
   context.fillRect(0, 0, width, height);
   context.drawImage(image, 0, 0, width, height);
@@ -432,7 +525,7 @@ export async function processPhotoLocally({
   }
 
   const refinedAlphaMask = resizeAlphaMask(
-    refineAlphaMask(alphaMask, maskWidth, maskHeight),
+    refineAlphaMask(alphaMask, maskWidth, maskHeight, cleanupProfile),
     maskWidth,
     maskHeight,
     width,
@@ -442,10 +535,21 @@ export async function processPhotoLocally({
   for (let pixelIndex = 0; pixelIndex < width * height; pixelIndex += 1) {
     const alpha = refinedAlphaMask[pixelIndex] / 255;
     const dataIndex = pixelIndex * 4;
+    const cleanEdge = decontaminateEdgePixel(
+      pixels,
+      refinedAlphaMask,
+      pixelIndex,
+      width,
+      height,
+      cleanupProfile.decontaminate
+    );
+    const sourceRed = cleanEdge?.red ?? pixels[dataIndex];
+    const sourceGreen = cleanEdge?.green ?? pixels[dataIndex + 1];
+    const sourceBlue = cleanEdge?.blue ?? pixels[dataIndex + 2];
 
-    pixels[dataIndex] = Math.round(pixels[dataIndex] * alpha + backgroundRed * (1 - alpha));
-    pixels[dataIndex + 1] = Math.round(pixels[dataIndex + 1] * alpha + backgroundGreen * (1 - alpha));
-    pixels[dataIndex + 2] = Math.round(pixels[dataIndex + 2] * alpha + backgroundBlue * (1 - alpha));
+    pixels[dataIndex] = Math.round(sourceRed * alpha + backgroundRed * (1 - alpha));
+    pixels[dataIndex + 1] = Math.round(sourceGreen * alpha + backgroundGreen * (1 - alpha));
+    pixels[dataIndex + 2] = Math.round(sourceBlue * alpha + backgroundBlue * (1 - alpha));
     pixels[dataIndex + 3] = 255;
   }
 

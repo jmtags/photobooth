@@ -1,5 +1,5 @@
 import { Screen, Btn, NavHeader } from "./ui";
-import { Check, Grid2X2, ImageIcon, LayoutGrid, Square } from "lucide-react";
+import { Check, Eraser, Grid2X2, ImageIcon, LayoutGrid, Sparkles, Square, Wand2 } from "lucide-react";
 
 export interface PhotoOptions {
   background: "original" | "white" | "blue" | "removed";
@@ -7,6 +7,7 @@ export interface PhotoOptions {
   smoothing: boolean;
   brightness: boolean;
   skinTone: boolean;
+  edgeCleanup: "natural" | "clean" | "strong";
   printSize: "1x1" | "2x2" | "passport" | "mixed";
 }
 
@@ -112,7 +113,31 @@ export function PhotoOptionsScreen({ options, onChange, onBack, onContinue, proc
             />
           </SimpleSection>
 
-          <SimpleSection title="2. Print Size">
+          <SimpleSection title="2. Edge Cleanup">
+            <BigChoice
+              label="Clean"
+              hint="Balanced edge"
+              selected={(options.edgeCleanup ?? "clean") === "clean"}
+              onClick={() => set("edgeCleanup", "clean")}
+              icon={<Sparkles size={24} />}
+            />
+            <BigChoice
+              label="Strong"
+              hint="Less residue"
+              selected={options.edgeCleanup === "strong"}
+              onClick={() => set("edgeCleanup", "strong")}
+              icon={<Eraser size={24} />}
+            />
+            <BigChoice
+              label="Natural"
+              hint="More hair detail"
+              selected={options.edgeCleanup === "natural"}
+              onClick={() => set("edgeCleanup", "natural")}
+              icon={<Wand2 size={24} />}
+            />
+          </SimpleSection>
+
+          <SimpleSection title="3. Print Size">
             <BigChoice
               label="2 x 2"
               hint="Most common"

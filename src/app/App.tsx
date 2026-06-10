@@ -38,6 +38,7 @@ const defaultOptions: PhotoOptions = {
   smoothing: false,
   brightness: true,
   skinTone: false,
+  edgeCleanup: "clean",
   printSize: "2x2",
 };
 
