@@ -12,6 +12,23 @@ const backgroundColors: Record<"white" | "blue", [number, number, number]> = {
 
 let segmenterPromise: Promise<ImageSegmenter> | null = null;
 
+type PersonMask =
+  | {
+      data: Float32Array;
+      type: "confidence";
+    }
+  | {
+      data: Uint8Array;
+      type: "category";
+      personCategory: number;
+    }
+  | {
+      data: Uint8Array;
+      type: "category-binary";
+      personCategory: number;
+      inverted: boolean;
+    };
+
 function getSegmenter() {
   if (!segmenterPromise) {
     segmenterPromise = FilesetResolver.forVisionTasks(visionWasmUrl).then((vision) =>
@@ -39,11 +56,66 @@ function loadImage(dataUrl: string) {
   });
 }
 
-function getPersonMask(result: ReturnType<ImageSegmenter["segment"]>) {
+function getCenterScore(
+  data: Float32Array | Uint8Array,
+  width: number,
+  height: number,
+  getValue: (value: number) => number
+) {
+  let centerTotal = 0;
+  let centerCount = 0;
+  let cornerTotal = 0;
+  let cornerCount = 0;
+
+  const centerLeft = Math.floor(width * 0.3);
+  const centerRight = Math.ceil(width * 0.7);
+  const centerTop = Math.floor(height * 0.18);
+  const centerBottom = Math.ceil(height * 0.82);
+  const cornerWidth = Math.max(1, Math.floor(width * 0.18));
+  const cornerHeight = Math.max(1, Math.floor(height * 0.18));
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const value = getValue(data[y * width + x]);
+
+      if (x >= centerLeft && x < centerRight && y >= centerTop && y < centerBottom) {
+        centerTotal += value;
+        centerCount += 1;
+      }
+
+      const inCornerX = x < cornerWidth || x >= width - cornerWidth;
+      const inCornerY = y < cornerHeight || y >= height - cornerHeight;
+      if (inCornerX && inCornerY) {
+        cornerTotal += value;
+        cornerCount += 1;
+      }
+    }
+  }
+
+  const centerAverage = centerCount > 0 ? centerTotal / centerCount : 0;
+  const cornerAverage = cornerCount > 0 ? cornerTotal / cornerCount : 0;
+  return centerAverage - cornerAverage * 0.75;
+}
+
+function getPersonMask(result: ReturnType<ImageSegmenter["segment"]>): PersonMask {
   const confidenceMasks = result.confidenceMasks;
-  if (confidenceMasks && confidenceMasks.length > 1) {
+  if (confidenceMasks && confidenceMasks.length > 0) {
+    let bestData = confidenceMasks[0].getAsFloat32Array();
+    let bestScore = getCenterScore(bestData, confidenceMasks[0].width, confidenceMasks[0].height, (value) => value);
+
+    for (let index = 1; index < confidenceMasks.length; index += 1) {
+      const mask = confidenceMasks[index];
+      const data = mask.getAsFloat32Array();
+      const score = getCenterScore(data, mask.width, mask.height, (value) => value);
+
+      if (score > bestScore) {
+        bestData = data;
+        bestScore = score;
+      }
+    }
+
     return {
-      data: confidenceMasks[1].getAsFloat32Array(),
+      data: bestData,
       type: "confidence" as const,
     };
   }
@@ -53,9 +125,47 @@ function getPersonMask(result: ReturnType<ImageSegmenter["segment"]>) {
     throw new Error("The browser did not return a person mask.");
   }
 
+  const data = categoryMask.getAsUint8Array();
+  const counts = new Map<number, number>();
+  for (const value of data) {
+    counts.set(value, (counts.get(value) ?? 0) + 1);
+  }
+
+  const categories = Array.from(counts.keys());
+  let bestCategory = categories[0] ?? 1;
+  let bestScore = Number.NEGATIVE_INFINITY;
+
+  for (const category of categories) {
+    const score = getCenterScore(data, categoryMask.width, categoryMask.height, (value) =>
+      value === category ? 1 : 0
+    );
+
+    if (score > bestScore) {
+      bestCategory = category;
+      bestScore = score;
+    }
+  }
+
+  if (categories.length <= 2) {
+    const directScore = getCenterScore(data, categoryMask.width, categoryMask.height, (value) =>
+      value === bestCategory ? 1 : 0
+    );
+    const invertedScore = getCenterScore(data, categoryMask.width, categoryMask.height, (value) =>
+      value === bestCategory ? 0 : 1
+    );
+
+    return {
+      data,
+      type: "category-binary" as const,
+      personCategory: bestCategory,
+      inverted: invertedScore > directScore,
+    };
+  }
+
   return {
-    data: categoryMask.getAsUint8Array(),
+    data,
     type: "category" as const,
+    personCategory: bestCategory,
   };
 }
 
@@ -64,7 +174,9 @@ function getPersonAlpha(mask: ReturnType<typeof getPersonMask>, pixelIndex: numb
     return Math.max(0, Math.min(255, Math.round(mask.data[pixelIndex] * 255)));
   }
 
-  return mask.data[pixelIndex] === 1 ? 255 : 0;
+  const isCategory = mask.data[pixelIndex] === mask.personCategory;
+  const isPerson = mask.type === "category-binary" && mask.inverted ? !isCategory : isCategory;
+  return isPerson ? 255 : 0;
 }
 
 export async function processPhotoLocally({
