@@ -179,6 +179,64 @@ function getPersonAlpha(mask: ReturnType<typeof getPersonMask>, pixelIndex: numb
   return isPerson ? 255 : 0;
 }
 
+function refineAlphaMask(alphaMask: Uint8ClampedArray, width: number, height: number) {
+  const binaryMask = new Uint8ClampedArray(alphaMask.length);
+  const cleanedMask = new Uint8ClampedArray(alphaMask.length);
+  const refinedMask = new Uint8ClampedArray(alphaMask.length);
+
+  for (let index = 0; index < alphaMask.length; index += 1) {
+    binaryMask[index] = alphaMask[index] >= 116 ? 255 : 0;
+  }
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const index = y * width + x;
+      let neighbors = 0;
+
+      for (let offsetY = -1; offsetY <= 1; offsetY += 1) {
+        const sampleY = y + offsetY;
+        if (sampleY < 0 || sampleY >= height) continue;
+
+        for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
+          const sampleX = x + offsetX;
+          if (sampleX < 0 || sampleX >= width) continue;
+          if (binaryMask[sampleY * width + sampleX] > 0) neighbors += 1;
+        }
+      }
+
+      cleanedMask[index] = neighbors >= 5 ? 255 : 0;
+    }
+  }
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const index = y * width + x;
+      let total = 0;
+      let weightTotal = 0;
+
+      for (let offsetY = -2; offsetY <= 2; offsetY += 1) {
+        const sampleY = y + offsetY;
+        if (sampleY < 0 || sampleY >= height) continue;
+
+        for (let offsetX = -2; offsetX <= 2; offsetX += 1) {
+          const sampleX = x + offsetX;
+          if (sampleX < 0 || sampleX >= width) continue;
+
+          const distance = Math.abs(offsetX) + Math.abs(offsetY);
+          const weight = distance === 0 ? 6 : distance === 1 ? 4 : distance === 2 ? 2 : 1;
+          total += cleanedMask[sampleY * width + sampleX] * weight;
+          weightTotal += weight;
+        }
+      }
+
+      const smoothed = weightTotal > 0 ? total / weightTotal : cleanedMask[index];
+      refinedMask[index] = Math.max(0, Math.min(255, Math.round(smoothed)));
+    }
+  }
+
+  return refinedMask;
+}
+
 export async function processPhotoLocally({
   photoUrl,
   options,
@@ -220,9 +278,16 @@ export async function processPhotoLocally({
   const imageData = context.getImageData(0, 0, width, height);
   const pixels = imageData.data;
   const personMask = getPersonMask(result);
+  const alphaMask = new Uint8ClampedArray(width * height);
 
   for (let pixelIndex = 0; pixelIndex < width * height; pixelIndex += 1) {
-    const alpha = getPersonAlpha(personMask, pixelIndex) / 255;
+    alphaMask[pixelIndex] = getPersonAlpha(personMask, pixelIndex);
+  }
+
+  const refinedAlphaMask = refineAlphaMask(alphaMask, width, height);
+
+  for (let pixelIndex = 0; pixelIndex < width * height; pixelIndex += 1) {
+    const alpha = refinedAlphaMask[pixelIndex] / 255;
     const dataIndex = pixelIndex * 4;
 
     pixels[dataIndex] = Math.round(pixels[dataIndex] * alpha + backgroundRed * (1 - alpha));
