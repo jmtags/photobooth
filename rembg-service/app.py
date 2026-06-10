@@ -6,7 +6,6 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from PIL import Image
-from rembg import remove
 
 
 MAX_IMAGE_BYTES = int(os.getenv("MAX_IMAGE_BYTES", str(10 * 1024 * 1024)))
@@ -46,6 +45,11 @@ def health():
     return {"ok": True}
 
 
+@app.get("/")
+def root():
+    return {"ok": True, "service": "photobooth-rembg"}
+
+
 def decode_data_url(data_url: str) -> bytes:
     if not data_url.startswith("data:image/") or ";base64," not in data_url:
         raise HTTPException(status_code=400, detail="A base64 image data URL is required.")
@@ -80,6 +84,8 @@ def process_photo(payload: ProcessPhotoRequest):
     image_bytes = decode_data_url(payload.photoUrl)
 
     try:
+        from rembg import remove
+
         source = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
         cutout = remove(source).convert("RGBA")
     except Exception as exc:
