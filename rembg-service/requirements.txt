@@ -1,4 +1,4 @@
 fastapi
 uvicorn[standard]
-rembg==2.0.76
+rembg[cpu]==2.0.76
 pillow
