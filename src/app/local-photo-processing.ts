@@ -179,13 +179,98 @@ function getPersonAlpha(mask: ReturnType<typeof getPersonMask>, pixelIndex: numb
   return isPerson ? 255 : 0;
 }
 
+function keepMainPersonComponents(binaryMask: Uint8ClampedArray, width: number, height: number) {
+  const visited = new Uint8Array(binaryMask.length);
+  const outputMask = new Uint8ClampedArray(binaryMask.length);
+  const stack: number[] = [];
+  const componentPixels: number[] = [];
+  const minArea = Math.max(64, Math.floor(width * height * 0.004));
+  let largestComponent: number[] = [];
+
+  for (let startIndex = 0; startIndex < binaryMask.length; startIndex += 1) {
+    if (visited[startIndex] || binaryMask[startIndex] === 0) continue;
+
+    visited[startIndex] = 1;
+    stack.push(startIndex);
+    componentPixels.length = 0;
+
+    let minX = width;
+    let maxX = 0;
+    let minY = height;
+    let maxY = 0;
+
+    while (stack.length > 0) {
+      const index = stack.pop() as number;
+      componentPixels.push(index);
+
+      const x = index % width;
+      const y = Math.floor(index / width);
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+
+      for (let offsetY = -1; offsetY <= 1; offsetY += 1) {
+        const nextY = y + offsetY;
+        if (nextY < 0 || nextY >= height) continue;
+
+        for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
+          if (offsetX === 0 && offsetY === 0) continue;
+
+          const nextX = x + offsetX;
+          if (nextX < 0 || nextX >= width) continue;
+
+          const nextIndex = nextY * width + nextX;
+          if (visited[nextIndex] || binaryMask[nextIndex] === 0) continue;
+
+          visited[nextIndex] = 1;
+          stack.push(nextIndex);
+        }
+      }
+    }
+
+    if (componentPixels.length > largestComponent.length) {
+      largestComponent = [...componentPixels];
+    }
+
+    const componentCenterX = (minX + maxX) / 2 / width;
+    const componentCenterY = (minY + maxY) / 2 / height;
+    const centered =
+      componentCenterX >= 0.18 &&
+      componentCenterX <= 0.82 &&
+      componentCenterY >= 0.08 &&
+      componentCenterY <= 0.92;
+    const usefulSize = componentPixels.length >= minArea;
+
+    if (usefulSize && centered) {
+      for (const index of componentPixels) {
+        outputMask[index] = 255;
+      }
+    }
+  }
+
+  let keptPixels = 0;
+  for (const value of outputMask) {
+    if (value > 0) keptPixels += 1;
+  }
+
+  if (keptPixels === 0) {
+    for (const index of largestComponent) {
+      outputMask[index] = 255;
+    }
+  }
+
+  return outputMask;
+}
+
 function refineAlphaMask(alphaMask: Uint8ClampedArray, width: number, height: number) {
   const binaryMask = new Uint8ClampedArray(alphaMask.length);
   const cleanedMask = new Uint8ClampedArray(alphaMask.length);
+  const tightenedMask = new Uint8ClampedArray(alphaMask.length);
   const refinedMask = new Uint8ClampedArray(alphaMask.length);
 
   for (let index = 0; index < alphaMask.length; index += 1) {
-    binaryMask[index] = alphaMask[index] >= 116 ? 255 : 0;
+    binaryMask[index] = alphaMask[index] >= 132 ? 255 : 0;
   }
 
   for (let y = 0; y < height; y += 1) {
@@ -208,6 +293,28 @@ function refineAlphaMask(alphaMask: Uint8ClampedArray, width: number, height: nu
     }
   }
 
+  const componentMask = keepMainPersonComponents(cleanedMask, width, height);
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const index = y * width + x;
+      let neighbors = 0;
+
+      for (let offsetY = -1; offsetY <= 1; offsetY += 1) {
+        const sampleY = y + offsetY;
+        if (sampleY < 0 || sampleY >= height) continue;
+
+        for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
+          const sampleX = x + offsetX;
+          if (sampleX < 0 || sampleX >= width) continue;
+          if (componentMask[sampleY * width + sampleX] > 0) neighbors += 1;
+        }
+      }
+
+      tightenedMask[index] = neighbors >= 6 ? 255 : 0;
+    }
+  }
+
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       const index = y * width + x;
@@ -224,7 +331,7 @@ function refineAlphaMask(alphaMask: Uint8ClampedArray, width: number, height: nu
 
           const distance = Math.abs(offsetX) + Math.abs(offsetY);
           const weight = distance === 0 ? 8 : distance === 1 ? 5 : distance <= 3 ? 2 : 1;
-          total += cleanedMask[sampleY * width + sampleX] * weight;
+          total += tightenedMask[sampleY * width + sampleX] * weight;
           weightTotal += weight;
         }
       }
@@ -234,7 +341,8 @@ function refineAlphaMask(alphaMask: Uint8ClampedArray, width: number, height: nu
       const softened = feathered > 16 && feathered < 240 ? feathered * 0.72 + sourceAlpha * 0.28 : feathered;
       const normalized = Math.max(0, Math.min(1, softened / 255));
       const smoothStep = normalized * normalized * (3 - 2 * normalized);
-      refinedMask[index] = Math.max(0, Math.min(255, Math.round(smoothStep * 255)));
+      const residueSuppressed = smoothStep < 0.45 ? smoothStep * smoothStep * 2.2 : smoothStep;
+      refinedMask[index] = Math.max(0, Math.min(255, Math.round(residueSuppressed * 255)));
     }
   }
 
