@@ -1,5 +1,5 @@
 import { Screen, Btn, NavHeader } from "./ui";
-import { Briefcase, Check, Grid2X2, ImageIcon, LayoutGrid, Shirt, Square, User } from "lucide-react";
+import { Check, Grid2X2, ImageIcon, LayoutGrid, Square } from "lucide-react";
 
 export interface PhotoOptions {
   background: "original" | "white" | "blue" | "removed";
@@ -112,31 +112,7 @@ export function PhotoOptionsScreen({ options, onChange, onBack, onContinue, proc
             />
           </SimpleSection>
 
-          <SimpleSection title="2. Clothes">
-            <BigChoice
-              label="Keep"
-              hint="Use my clothes"
-              selected={options.attire === "original"}
-              onClick={() => set("attire", "original")}
-              icon={<User size={24} />}
-            />
-            <BigChoice
-              label="Office"
-              hint="Jacket and shirt"
-              selected={options.attire === "male-office"}
-              onClick={() => set("attire", "male-office")}
-              icon={<Briefcase size={24} />}
-            />
-            <BigChoice
-              label="Formal"
-              hint="Blazer style"
-              selected={options.attire === "female-office"}
-              onClick={() => set("attire", "female-office")}
-              icon={<Shirt size={24} />}
-            />
-          </SimpleSection>
-
-          <SimpleSection title="3. Print Size">
+          <SimpleSection title="2. Print Size">
             <BigChoice
               label="2 x 2"
               hint="Most common"

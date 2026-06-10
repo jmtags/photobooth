@@ -9,18 +9,21 @@
 
   Run `npm run dev` to start the development server.
 
-  For camera access and photo processing during local testing, create a `.env`
-  file from `.env.example`, set `OPENAI_API_KEY`, then run:
+  For camera access and photo processing during local testing, start the
+  `rembg-service` API, create a `.env` file from `.env.example`, then run the
+  HTTPS dev server:
 
   ```bash
-  npm run dev:full
+  npm run dev:https
   ```
 
-  ## Production
+  ## Photo Processing API
 
-  The `/api/process-photo` endpoint is included as a serverless API route for
-  hosts like Vercel. Set these environment variables in your hosting dashboard:
+  The React app calls `VITE_PHOTO_API_URL` and expects:
 
-  - `OPENAI_API_KEY`
-  - `OPENAI_IMAGE_MODEL` (optional, one of `gpt-image-1.5`, `gpt-image-1`, or `gpt-image-1-mini`; defaults to `gpt-image-1`)
+  - `GET /api/health`
+  - `POST /api/process-photo`
+
+  Deploy `rembg-service` to Render for background removal. Images are processed
+  temporarily and returned to the browser; they are not stored in a database.
   

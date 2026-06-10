@@ -41,6 +41,19 @@ const defaultOptions: PhotoOptions = {
 };
 
 const displaySettingsKey = "photobooth-display-settings";
+const photoApiUrl = (import.meta.env.VITE_PHOTO_API_URL ?? "").replace(/\/$/, "");
+
+function getProcessErrorMessage(data: unknown) {
+  if (!data || typeof data !== "object") {
+    return "Photo processing failed.";
+  }
+
+  const payload = data as { detail?: unknown; error?: unknown };
+  if (typeof payload.detail === "string") return payload.detail;
+  if (typeof payload.error === "string") return payload.error;
+  if (Array.isArray(payload.detail)) return "Photo processing request was invalid.";
+  return "Photo processing failed.";
+}
 
 type FullscreenDocument = Document & {
   webkitExitFullscreen?: () => Promise<void> | void;
@@ -212,7 +225,7 @@ export default function App() {
     setProcessNotice(null);
 
     try {
-      const response = await fetch("/api/process-photo", {
+      const response = await fetch(`${photoApiUrl}/api/process-photo`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ photoUrl, options }),
@@ -224,10 +237,7 @@ export default function App() {
         : { error: await response.text() };
 
       if (!response.ok) {
-        const detailText = data.details?.openaiRequestId
-          ? ` Request ID: ${data.details.openaiRequestId}.`
-          : "";
-        throw new Error(`${data.error ?? "Photo processing failed."}${detailText}`);
+        throw new Error(getProcessErrorMessage(data));
       }
 
       if (!data.processedPhotoUrl) {
