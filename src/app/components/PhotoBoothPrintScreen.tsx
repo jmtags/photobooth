@@ -240,6 +240,10 @@ function getBoothPrintHtml(photoUrls: string[], theme: PhotoBoothTheme, layout: 
 </html>`;
 }
 
+function shouldUsePagePrintFallback() {
+  return typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
+}
+
 function PreviewPhoto({ url, className }: { url: string; className: string }) {
   return (
     <div className={`overflow-hidden bg-white shadow ring-1 ring-[#CBD5E1] ${className}`}>
@@ -266,9 +270,27 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
 
     printStartedRef.current = true;
     let finished = false;
-    const printFrame = document.createElement("iframe");
 
     const finishOnce = () => {
+      if (finished) return;
+      finished = true;
+      finishPrint();
+    };
+
+    if (shouldUsePagePrintFallback()) {
+      window.addEventListener("afterprint", finishOnce, { once: true });
+      window.print();
+      window.setTimeout(() => {
+        if (printStartedRef.current) {
+          finishOnce();
+        }
+      }, 60000);
+      return;
+    }
+
+    const printFrame = document.createElement("iframe");
+
+    const finishFrameOnce = () => {
       if (finished) return;
       finished = true;
       printFrame.remove();
@@ -289,17 +311,17 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
     printFrame.onload = () => {
       const printWindow = printFrame.contentWindow;
       if (!printWindow) {
-        finishOnce();
+        finishFrameOnce();
         return;
       }
 
-      printWindow.addEventListener("afterprint", finishOnce, { once: true });
+      printWindow.addEventListener("afterprint", finishFrameOnce, { once: true });
       printWindow.focus();
       printWindow.print();
 
       window.setTimeout(() => {
         if (printStartedRef.current) {
-          finishOnce();
+          finishFrameOnce();
         }
       }, 60000);
     };
@@ -311,7 +333,156 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
 
   return (
     <Screen>
+      <style>{`
+        .booth-print-sheet {
+          display: none;
+        }
+
+        @page {
+          size: A5 portrait;
+          margin: 0;
+        }
+
+        @media print {
+          html,
+          body {
+            width: 148mm;
+            height: 210mm;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: ${currentTheme.printBackground} !important;
+          }
+
+          body * {
+            visibility: hidden !important;
+          }
+
+          .booth-print-sheet,
+          .booth-print-sheet * {
+            visibility: visible !important;
+          }
+
+          .booth-print-sheet {
+            display: flex !important;
+            position: fixed !important;
+            inset: 0 auto auto 0 !important;
+            width: 148mm !important;
+            height: 210mm !important;
+            padding: 8mm !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 4mm !important;
+            overflow: hidden !important;
+            background: ${currentTheme.printBackground} !important;
+            color: ${currentTheme.textColor} !important;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+          }
+
+          .booth-print-title {
+            font-size: 10pt !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.18em !important;
+            text-transform: uppercase !important;
+          }
+
+          .booth-print-photo {
+            overflow: hidden !important;
+            flex: 0 0 auto !important;
+            background: ${currentTheme.frameBackground} !important;
+            border: 1.2mm solid ${currentTheme.border} !important;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+          }
+
+          .booth-print-photo img {
+            display: block !important;
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+            object-position: center center !important;
+          }
+
+          .booth-print-strip {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 2.5mm !important;
+          }
+
+          .booth-print-strip .booth-print-photo {
+            width: 106mm !important;
+            height: 43mm !important;
+          }
+
+          .booth-print-grid {
+            display: grid !important;
+            grid-template-columns: repeat(2, 58mm) !important;
+            gap: 3mm !important;
+          }
+
+          .booth-print-grid .booth-print-photo {
+            width: 58mm !important;
+            height: 72mm !important;
+          }
+
+          .booth-print-film {
+            width: 92mm !important;
+            padding: 3mm !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 2mm !important;
+            background: ${theme === "bold" ? "#020617" : "#111827"} !important;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+          }
+
+          .booth-print-film-frame {
+            padding: 1.5mm 4mm !important;
+            background:
+              repeating-linear-gradient(90deg, white 0 2mm, transparent 2mm 7mm) top / 100% 2mm no-repeat,
+              repeating-linear-gradient(90deg, white 0 2mm, transparent 2mm 7mm) bottom / 100% 2mm no-repeat !important;
+          }
+
+          .booth-print-film-frame .booth-print-photo {
+            width: 76mm !important;
+            height: 38mm !important;
+            border-color: white !important;
+          }
+        }
+      `}</style>
       <NavHeader onBack={onBack} title="Photo Booth Print" step={4} totalSteps={5} />
+
+      <div className="booth-print-sheet" aria-hidden="true">
+        <div className="booth-print-title">{currentTheme.label} Photo Booth</div>
+        {layout === "grid" ? (
+          <div className="booth-print-grid">
+            {previews.map((url, index) => (
+              <div className="booth-print-photo" key={`${url}-${index}`}>
+                <img src={url} alt="" />
+              </div>
+            ))}
+          </div>
+        ) : layout === "film" ? (
+          <div className="booth-print-film">
+            {previews.map((url, index) => (
+              <div className="booth-print-film-frame" key={`${url}-${index}`}>
+                <div className="booth-print-photo">
+                  <img src={url} alt="" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="booth-print-strip">
+            {previews.map((url, index) => (
+              <div className="booth-print-photo" key={`${url}-${index}`}>
+                <img src={url} alt="" />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="flex-1 flex flex-col items-center px-4 py-6 gap-4 overflow-hidden">
         <div className="flex items-center gap-4 bg-white rounded-xl border border-[#E2E8F0] px-4 py-2.5 shadow-sm text-sm">

@@ -129,6 +129,10 @@ function getPrintSheetHtml(photoUrl: string, options: PhotoOptions) {
 </html>`;
 }
 
+function shouldUsePagePrintFallback() {
+  return typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
+}
+
 function PhotoTile({
   url,
   originalUrl,
@@ -242,8 +246,26 @@ export function PrintLayoutScreen({ photoUrl, originalPhotoUrl, options, onBack,
 
     printStartedRef.current = true;
     let finished = false;
-    const printFrame = document.createElement("iframe");
     const finishOnce = () => {
+      if (finished) return;
+      finished = true;
+      finishPrint();
+    };
+
+    if (shouldUsePagePrintFallback()) {
+      window.addEventListener("afterprint", finishOnce, { once: true });
+      window.print();
+      window.setTimeout(() => {
+        if (printStartedRef.current) {
+          finishOnce();
+        }
+      }, 60000);
+      return;
+    }
+
+    const printFrame = document.createElement("iframe");
+
+    const finishFrameOnce = () => {
       if (finished) return;
       finished = true;
       printFrame.remove();
@@ -264,17 +286,17 @@ export function PrintLayoutScreen({ photoUrl, originalPhotoUrl, options, onBack,
     printFrame.onload = () => {
       const printWindow = printFrame.contentWindow;
       if (!printWindow) {
-        finishOnce();
+        finishFrameOnce();
         return;
       }
 
-      printWindow.addEventListener("afterprint", finishOnce, { once: true });
+      printWindow.addEventListener("afterprint", finishFrameOnce, { once: true });
       printWindow.focus();
       printWindow.print();
 
       window.setTimeout(() => {
         if (printStartedRef.current) {
-          finishOnce();
+          finishFrameOnce();
         }
       }, 60000);
     };
