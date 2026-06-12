@@ -52,7 +52,6 @@ const defaultOptions: PhotoOptions = {
 };
 
 const displaySettingsKey = "photobooth-display-settings";
-const androidPrintSessionKey = "photobooth-active-print-session";
 
 type FullscreenDocument = Document & {
   webkitExitFullscreen?: () => Promise<void> | void;
@@ -117,50 +116,6 @@ export default function App() {
       }));
     } catch {
       // Ignore invalid saved settings.
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    try {
-      const raw = window.sessionStorage.getItem(androidPrintSessionKey);
-      if (!raw) return;
-
-      const parsed = JSON.parse(raw) as {
-        mode?: AppMode;
-        photoUrl?: string;
-        originalPhotoUrl?: string;
-        options?: PhotoOptions;
-        photoUrls?: string[];
-        theme?: PhotoBoothTheme;
-        layout?: PhotoBoothLayout;
-      };
-
-      if (parsed.mode === "id-photo" && parsed.photoUrl && parsed.options) {
-        setPhotoUrl(parsed.originalPhotoUrl || parsed.photoUrl);
-        setProcessedPhotoUrl(parsed.photoUrl);
-        setOptions(parsed.options);
-        setDisplaySettings((current) => ({ ...current, appMode: "id-photo" }));
-        go("layout");
-        return;
-      }
-
-      if (
-        parsed.mode === "photo-booth" &&
-        Array.isArray(parsed.photoUrls) &&
-        parsed.photoUrls.length >= 4 &&
-        (parsed.theme === "classic" || parsed.theme === "pastel" || parsed.theme === "bold") &&
-        (parsed.layout === "strip" || parsed.layout === "grid" || parsed.layout === "film")
-      ) {
-        setBoothPhotoUrls(parsed.photoUrls.slice(0, 4));
-        setBoothTheme(parsed.theme);
-        setBoothLayout(parsed.layout);
-        setDisplaySettings((current) => ({ ...current, appMode: "photo-booth" }));
-        go("layout");
-      }
-    } catch {
-      window.sessionStorage.removeItem(androidPrintSessionKey);
     }
   }, []);
 
@@ -307,9 +262,6 @@ export default function App() {
   };
 
   const handleNewSession = () => {
-    if (typeof window !== "undefined") {
-      window.sessionStorage.removeItem(androidPrintSessionKey);
-    }
     setPhotoUrl("");
     setBoothPhotoUrls([]);
     setBoothTheme("classic");
@@ -420,11 +372,12 @@ export default function App() {
             onPrint={() => go("printing")}
           />
         )}
-        {screen === "printing" && <PrintingScreen onDone={() => go("success")} />}
+        {screen === "printing" && (
+          <PrintingScreen appMode={displaySettings.appMode} onDone={() => go("success")} />
+        )}
         {screen === "success" && (
           <SuccessScreen
             appMode={displaySettings.appMode}
-            onPrintAnother={() => go("layout")}
             onNewSession={handleNewSession}
           />
         )}

@@ -1,20 +1,23 @@
 import { useEffect, useState } from "react";
 import { Screen, ProgressBar } from "./ui";
 import { motion } from "motion/react";
+import { Printer, Sparkles } from "lucide-react";
 
 interface Props {
+  appMode?: "id-photo" | "photo-booth";
   onDone: () => void;
 }
 
 const steps = [
-  { label: "Preparing Sheet", duration: 900 },
-  { label: "Opening Print Dialog", duration: 900 },
-  { label: "Sending To Printer", duration: 1200 },
+  { label: "Composing sheet", duration: 850 },
+  { label: "Preparing print", duration: 950 },
+  { label: "Finishing session", duration: 1050 },
 ];
 
-export function PrintingScreen({ onDone }: Props) {
+export function PrintingScreen({ appMode = "id-photo", onDone }: Props) {
   const [stepIndex, setStepIndex] = useState(0);
   const [progress, setProgress] = useState(0);
+  const isPhotoBooth = appMode === "photo-booth";
 
   useEffect(() => {
     let current = 0;
@@ -46,94 +49,90 @@ export function PrintingScreen({ onDone }: Props) {
   }, [onDone]);
 
   return (
-    <Screen className="items-center justify-center">
-      <div className="flex flex-col items-center gap-8 px-6 max-w-sm mx-auto text-center">
-        {/* Animated printer icon */}
+    <Screen className="items-center justify-center bg-[#F8FAFC]">
+      <div className="flex w-full max-w-sm flex-col items-center gap-8 px-6 text-center">
         <motion.div
-          animate={{ rotate: [0, 5, -5, 5, 0], scale: [1, 1.05, 1] }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-          className="w-32 h-32 rounded-3xl bg-[#2563EB] flex items-center justify-center shadow-2xl shadow-blue-200"
+          initial={{ opacity: 0, y: 18, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ type: "spring", damping: 18, stiffness: 140 }}
+          className="relative flex h-36 w-36 items-center justify-center rounded-[28px] bg-white shadow-2xl shadow-blue-100 ring-1 ring-[#DBEAFE]"
         >
-          <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
-            <rect x="8" y="18" width="44" height="26" rx="6" fill="white" opacity="0.9" />
-            <rect x="14" y="8" width="32" height="14" rx="3" fill="white" opacity="0.7" />
-            <rect x="14" y="34" width="32" height="18" rx="3" fill="white" />
-            <rect x="20" y="40" width="20" height="2" rx="1" fill="#2563EB" />
-            <rect x="20" y="45" width="14" height="2" rx="1" fill="#2563EB" opacity="0.5" />
-            <circle cx="44" cy="28" r="3" fill="#22C55E" />
-            {/* Paper coming out */}
-            <motion.rect
-              x="20" y="30" width="20" height="10" rx="1" fill="#EFF6FF"
-              animate={{ y: [30, 38, 30] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-            />
-          </svg>
+          <motion.div
+            className="absolute inset-4 rounded-[22px] border border-[#DBEAFE]"
+            animate={{ opacity: [0.35, 0.9, 0.35] }}
+            transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+          />
+          {isPhotoBooth ? (
+            <div className="grid grid-cols-2 gap-1.5">
+              {Array.from({ length: 4 }, (_, index) => (
+                <motion.div
+                  key={index}
+                  className="h-9 w-9 rounded-md bg-[#EFF6FF] ring-1 ring-[#BFDBFE]"
+                  animate={{ y: [0, -3, 0], opacity: [0.75, 1, 0.75] }}
+                  transition={{ duration: 1.4, repeat: Infinity, delay: index * 0.12 }}
+                />
+              ))}
+            </div>
+          ) : (
+            <Printer size={54} className="text-[#2563EB]" strokeWidth={1.8} />
+          )}
+          <motion.div
+            className="absolute -right-3 -top-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#2563EB] text-white shadow-lg shadow-blue-200"
+            animate={{ scale: [1, 1.08, 1] }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <Sparkles size={18} />
+          </motion.div>
         </motion.div>
 
-        <div className="flex flex-col gap-2">
-          <h2 className="text-2xl font-bold text-[#0F172A]">Preparing Your Print</h2>
-          <p className="text-[#64748B] text-sm">Please wait while we prepare your print</p>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.12 }}
+          className="flex flex-col gap-2"
+        >
+          <h2 className="text-2xl font-extrabold text-[#0F172A]">
+            {isPhotoBooth ? "Finishing Your Booth Print" : "Finishing Your Print"}
+          </h2>
+          <p className="text-sm leading-relaxed text-[#64748B]">
+            {isPhotoBooth
+              ? "Your four-photo sheet is being prepared for a clean A5 print."
+              : "Your photo sheet is being prepared for printing."}
+          </p>
+        </motion.div>
 
-        <div className="w-full flex flex-col gap-3">
-          <ProgressBar value={progress} />
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-semibold text-[#2563EB]">{steps[stepIndex]?.label}</span>
-            <span className="text-sm text-[#64748B]">{Math.round(progress)}%</span>
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.22 }}
+          className="w-full rounded-2xl border border-[#E2E8F0] bg-white p-4 shadow-sm"
+        >
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-sm font-bold text-[#2563EB]">{steps[stepIndex]?.label}</span>
+            <span className="text-sm font-semibold text-[#64748B]">{Math.round(progress)}%</span>
           </div>
-        </div>
+          <ProgressBar value={progress} />
 
-        {/* Step list */}
-        <div className="w-full flex flex-col gap-2">
-          {steps.map((step, i) => (
-            <div
-              key={step.label}
-              className={`flex items-center gap-3 py-2 px-4 rounded-xl transition-all duration-300 ${
-                i < stepIndex
-                  ? "bg-green-50"
-                  : i === stepIndex
-                  ? "bg-blue-50"
-                  : "bg-[#F8FAFC]"
-              }`}
-            >
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            {steps.map((step, i) => (
               <div
-                className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold transition-all ${
-                  i < stepIndex
-                    ? "bg-[#22C55E] text-white"
-                    : i === stepIndex
-                    ? "bg-[#2563EB] text-white"
-                    : "bg-[#E2E8F0] text-[#94A3B8]"
+                key={step.label}
+                className={`h-1.5 rounded-full transition-colors duration-300 ${
+                  i <= stepIndex ? "bg-[#2563EB]" : "bg-[#E2E8F0]"
                 }`}
-              >
-                {i < stepIndex ? (
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                    <path d="M2 5L4.5 7.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                ) : (
-                  i + 1
-                )}
-              </div>
-              <span
-                className={`text-sm font-semibold ${
-                  i < stepIndex
-                    ? "text-[#22C55E]"
-                    : i === stepIndex
-                    ? "text-[#2563EB]"
-                    : "text-[#94A3B8]"
-                }`}
-              >
-                {step.label}
-              </span>
-              {i === stepIndex && (
-                <motion.div
-                  animate={{ opacity: [1, 0.3, 1] }}
-                  transition={{ duration: 0.8, repeat: Infinity }}
-                  className="ml-auto w-2 h-2 rounded-full bg-[#2563EB]"
-                />
-              )}
-            </div>
-          ))}
-        </div>
+              />
+            ))}
+          </div>
+        </motion.div>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.35 }}
+          className="text-xs font-medium uppercase tracking-[0.18em] text-[#94A3B8]"
+        >
+          Please keep this screen open
+        </motion.p>
       </div>
     </Screen>
   );

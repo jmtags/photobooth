@@ -14,7 +14,6 @@ interface Props {
 const printTile1 = { w: 25.4, h: 25.4 };
 const printTile2 = { w: 50.8, h: 50.8 };
 const printTilePassport = { w: 35, h: 45 };
-const androidPrintSessionKey = "photobooth-active-print-session";
 
 function escapeAttribute(value: string) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
@@ -166,27 +165,14 @@ function writeAndroidPrintDocument(html: string) {
         font-size: 12px;
       }
 
-      .android-print-actions {
-        display: flex;
-        gap: 8px;
-        flex-shrink: 0;
-      }
-
-      .android-print-actions button {
+      .return-to-app {
         border: 0;
         border-radius: 999px;
-        font: 700 14px Arial, sans-serif;
-        padding: 12px 16px;
-      }
-
-      .print-again {
         background: #2563EB;
         color: white;
-      }
-
-      .return-to-app {
-        background: #F1F5F9;
-        color: #0F172A;
+        flex-shrink: 0;
+        font: 700 14px Arial, sans-serif;
+        padding: 12px 16px;
       }
 
       @media print {
@@ -197,13 +183,10 @@ function writeAndroidPrintDocument(html: string) {
     </style>
     <div class="android-print-toolbar">
       <div>
-        <strong>Print preview is ready</strong>
-        <span>Use Print Again for another copy, or return to the app.</span>
+        <strong>Print sheet is ready</strong>
+        <span>Finish the Android print dialog, then return for the next session.</span>
       </div>
-      <div class="android-print-actions">
-        <button class="print-again" onclick="window.print()">Print Again</button>
-        <button class="return-to-app" onclick="window.location.reload()">Return</button>
-      </div>
+      <button class="return-to-app" onclick="window.location.reload()">Return</button>
     </div>
   `;
 
@@ -338,15 +321,6 @@ export function PrintLayoutScreen({ photoUrl, originalPhotoUrl, options, onBack,
     };
 
     if (shouldUsePagePrintFallback()) {
-      window.sessionStorage.setItem(
-        androidPrintSessionKey,
-        JSON.stringify({
-          mode: "id-photo",
-          photoUrl,
-          originalPhotoUrl,
-          options,
-        })
-      );
       writeAndroidPrintDocument(getPrintSheetHtml(photoUrl, options));
       return;
     }
