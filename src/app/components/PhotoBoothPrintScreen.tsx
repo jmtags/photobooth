@@ -244,6 +244,36 @@ function shouldUsePagePrintFallback() {
   return typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
 }
 
+function writeAndroidPrintDocument(html: string) {
+  const backButton = `
+    <style>
+      .return-to-app {
+        position: fixed;
+        right: 12px;
+        bottom: 12px;
+        z-index: 10;
+        border: 0;
+        border-radius: 999px;
+        background: #2563EB;
+        color: white;
+        font: 700 14px Arial, sans-serif;
+        padding: 12px 16px;
+      }
+
+      @media print {
+        .return-to-app {
+          display: none !important;
+        }
+      }
+    </style>
+    <button class="return-to-app" onclick="window.location.reload()">Return to App</button>
+  `;
+
+  document.open();
+  document.write(html.replace("</body>", `${backButton}</body>`));
+  document.close();
+}
+
 function PreviewPhoto({ url, className }: { url: string; className: string }) {
   return (
     <div className={`overflow-hidden bg-white shadow ring-1 ring-[#CBD5E1] ${className}`}>
@@ -280,16 +310,7 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
     };
 
     if (shouldUsePagePrintFallback()) {
-      setMobilePrintMode(true);
-      window.addEventListener("afterprint", finishOnce, { once: true });
-      window.setTimeout(() => {
-        window.print();
-      }, 500);
-      window.setTimeout(() => {
-        if (printStartedRef.current) {
-          finishOnce();
-        }
-      }, 60000);
+      writeAndroidPrintDocument(getBoothPrintHtml(photoUrls, theme, layout));
       return;
     }
 
