@@ -305,6 +305,13 @@ function writeAndroidPrintDocument(html: string) {
         }
       }
     </style>
+    <script>
+      window.addEventListener("afterprint", function () {
+        window.setTimeout(function () {
+          window.location.reload();
+        }, 500);
+      });
+    </script>
     <div class="android-print-toolbar">
       <div>
         <strong>Print sheet is ready</strong>
