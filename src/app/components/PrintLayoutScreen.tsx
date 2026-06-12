@@ -222,6 +222,7 @@ function PrintPhotoTile({
 
 export function PrintLayoutScreen({ photoUrl, originalPhotoUrl, options, onBack, onPrint }: Props) {
   const [zoom, setZoom] = useState(1);
+  const [mobilePrintMode, setMobilePrintMode] = useState(false);
   const printStartedRef = useRef(false);
 
   // A5 = 148 × 210 mm — render at 2.5px/mm → 370 × 525px
@@ -249,12 +250,16 @@ export function PrintLayoutScreen({ photoUrl, originalPhotoUrl, options, onBack,
     const finishOnce = () => {
       if (finished) return;
       finished = true;
+      setMobilePrintMode(false);
       finishPrint();
     };
 
     if (shouldUsePagePrintFallback()) {
+      setMobilePrintMode(true);
       window.addEventListener("afterprint", finishOnce, { once: true });
-      window.print();
+      window.setTimeout(() => {
+        window.print();
+      }, 500);
       window.setTimeout(() => {
         if (printStartedRef.current) {
           finishOnce();
@@ -444,6 +449,87 @@ export function PrintLayoutScreen({ photoUrl, originalPhotoUrl, options, onBack,
       </div>
     );
   }, [options.background, options.printSize, originalPhotoUrl, photoUrl]);
+
+  if (mobilePrintMode) {
+    return (
+      <Screen>
+        <style>{`
+          @page {
+            size: A5 portrait;
+            margin: 0;
+          }
+
+          html,
+          body {
+            background: white !important;
+          }
+
+          .mobile-direct-print-sheet {
+            width: 148mm;
+            height: 210mm;
+            margin: 0 auto;
+            overflow: hidden;
+            background: white;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+          }
+
+          .mobile-direct-print-sheet .print-layout {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5mm;
+          }
+
+          .mobile-direct-print-sheet .print-layout-center {
+            align-items: center;
+            justify-content: center;
+          }
+
+          .mobile-direct-print-sheet .print-row {
+            display: flex;
+            gap: 1.5mm;
+          }
+
+          .mobile-direct-print-sheet .print-photo-tile {
+            overflow: hidden;
+            flex: 0 0 auto;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+          }
+
+          .mobile-direct-print-sheet .print-photo-tile img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center 38%;
+          }
+
+          @media print {
+            html,
+            body {
+              width: 148mm;
+              height: 210mm;
+              margin: 0 !important;
+              padding: 0 !important;
+              background: white !important;
+            }
+
+            .mobile-direct-print-sheet {
+              position: fixed !important;
+              inset: 0 auto auto 0 !important;
+              margin: 0 !important;
+            }
+          }
+        `}</style>
+        <div className="flex min-h-[100dvh] items-start justify-center bg-white">
+          <div className="mobile-direct-print-sheet">{printLayout}</div>
+        </div>
+      </Screen>
+    );
+  }
 
   return (
     <Screen>

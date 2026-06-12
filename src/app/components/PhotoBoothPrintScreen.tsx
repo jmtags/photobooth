@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Printer } from "lucide-react";
 import { Screen, Btn, NavHeader } from "./ui";
 import type { PhotoBoothLayout, PhotoBoothTheme } from "./PhotoBoothOptionsScreen";
@@ -254,6 +254,7 @@ function PreviewPhoto({ url, className }: { url: string; className: string }) {
 
 export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrint }: Props) {
   const printStartedRef = useRef(false);
+  const [mobilePrintMode, setMobilePrintMode] = useState(false);
   const currentTheme = themes[theme];
 
   const finishPrint = useCallback(() => {
@@ -274,12 +275,16 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
     const finishOnce = () => {
       if (finished) return;
       finished = true;
+      setMobilePrintMode(false);
       finishPrint();
     };
 
     if (shouldUsePagePrintFallback()) {
+      setMobilePrintMode(true);
       window.addEventListener("afterprint", finishOnce, { once: true });
-      window.print();
+      window.setTimeout(() => {
+        window.print();
+      }, 500);
       window.setTimeout(() => {
         if (printStartedRef.current) {
           finishOnce();
@@ -330,6 +335,164 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
   }, [finishPrint, layout, onPrint, photoUrls, theme]);
 
   const previews = useMemo(() => photoUrls.slice(0, 4), [photoUrls]);
+
+  const printSheetContent = (
+    <>
+      <div className="booth-print-title">{currentTheme.label} Photo Booth</div>
+      {layout === "grid" ? (
+        <div className="booth-print-grid">
+          {previews.map((url, index) => (
+            <div className="booth-print-photo" key={`${url}-${index}`}>
+              <img src={url} alt="" />
+            </div>
+          ))}
+        </div>
+      ) : layout === "film" ? (
+        <div className="booth-print-film">
+          {previews.map((url, index) => (
+            <div className="booth-print-film-frame" key={`${url}-${index}`}>
+              <div className="booth-print-photo">
+                <img src={url} alt="" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="booth-print-strip">
+          {previews.map((url, index) => (
+            <div className="booth-print-photo" key={`${url}-${index}`}>
+              <img src={url} alt="" />
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+
+  if (mobilePrintMode) {
+    return (
+      <Screen>
+        <style>{`
+          @page {
+            size: A5 portrait;
+            margin: 0;
+          }
+
+          html,
+          body {
+            background: ${currentTheme.printBackground} !important;
+          }
+
+          .mobile-direct-booth-sheet {
+            width: 148mm;
+            height: 210mm;
+            margin: 0 auto;
+            padding: 8mm;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4mm;
+            overflow: hidden;
+            background: ${currentTheme.printBackground};
+            color: ${currentTheme.textColor};
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+          }
+
+          .mobile-direct-booth-sheet .booth-print-title {
+            font-size: 10pt;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+          }
+
+          .mobile-direct-booth-sheet .booth-print-photo {
+            overflow: hidden;
+            flex: 0 0 auto;
+            background: ${currentTheme.frameBackground};
+            border: 1.2mm solid ${currentTheme.border};
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+          }
+
+          .mobile-direct-booth-sheet .booth-print-photo img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center center;
+          }
+
+          .mobile-direct-booth-sheet .booth-print-strip {
+            display: flex;
+            flex-direction: column;
+            gap: 2.5mm;
+          }
+
+          .mobile-direct-booth-sheet .booth-print-strip .booth-print-photo {
+            width: 106mm;
+            height: 43mm;
+          }
+
+          .mobile-direct-booth-sheet .booth-print-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 58mm);
+            gap: 3mm;
+          }
+
+          .mobile-direct-booth-sheet .booth-print-grid .booth-print-photo {
+            width: 58mm;
+            height: 72mm;
+          }
+
+          .mobile-direct-booth-sheet .booth-print-film {
+            width: 92mm;
+            padding: 3mm;
+            display: flex;
+            flex-direction: column;
+            gap: 2mm;
+            background: ${theme === "bold" ? "#020617" : "#111827"};
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+          }
+
+          .mobile-direct-booth-sheet .booth-print-film-frame {
+            padding: 1.5mm 4mm;
+            background:
+              repeating-linear-gradient(90deg, white 0 2mm, transparent 2mm 7mm) top / 100% 2mm no-repeat,
+              repeating-linear-gradient(90deg, white 0 2mm, transparent 2mm 7mm) bottom / 100% 2mm no-repeat;
+          }
+
+          .mobile-direct-booth-sheet .booth-print-film-frame .booth-print-photo {
+            width: 76mm;
+            height: 38mm;
+            border-color: white;
+          }
+
+          @media print {
+            html,
+            body {
+              width: 148mm;
+              height: 210mm;
+              margin: 0 !important;
+              padding: 0 !important;
+              background: ${currentTheme.printBackground} !important;
+            }
+
+            .mobile-direct-booth-sheet {
+              position: fixed !important;
+              inset: 0 auto auto 0 !important;
+              margin: 0 !important;
+            }
+          }
+        `}</style>
+        <div className="flex min-h-[100dvh] items-start justify-center" style={{ background: currentTheme.printBackground }}>
+          <div className="mobile-direct-booth-sheet">{printSheetContent}</div>
+        </div>
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
@@ -454,34 +617,7 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
       <NavHeader onBack={onBack} title="Photo Booth Print" step={4} totalSteps={5} />
 
       <div className="booth-print-sheet" aria-hidden="true">
-        <div className="booth-print-title">{currentTheme.label} Photo Booth</div>
-        {layout === "grid" ? (
-          <div className="booth-print-grid">
-            {previews.map((url, index) => (
-              <div className="booth-print-photo" key={`${url}-${index}`}>
-                <img src={url} alt="" />
-              </div>
-            ))}
-          </div>
-        ) : layout === "film" ? (
-          <div className="booth-print-film">
-            {previews.map((url, index) => (
-              <div className="booth-print-film-frame" key={`${url}-${index}`}>
-                <div className="booth-print-photo">
-                  <img src={url} alt="" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="booth-print-strip">
-            {previews.map((url, index) => (
-              <div className="booth-print-photo" key={`${url}-${index}`}>
-                <img src={url} alt="" />
-              </div>
-            ))}
-          </div>
-        )}
+        {printSheetContent}
       </div>
 
       <div className="flex-1 flex flex-col items-center px-4 py-6 gap-4 overflow-hidden">
