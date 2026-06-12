@@ -1,7 +1,8 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Printer } from "lucide-react";
 import { Screen, Btn, NavHeader } from "./ui";
 import type { PhotoBoothLayout, PhotoBoothTheme } from "./PhotoBoothOptionsScreen";
+import { createBoothPrintImage } from "../print-image";
 
 interface Props {
   photoUrls: string[];
@@ -340,6 +341,8 @@ function PreviewPhoto({ url, className }: { url: string; className: string }) {
 export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrint }: Props) {
   const printStartedRef = useRef(false);
   const [mobilePrintMode, setMobilePrintMode] = useState(false);
+  const [printImageUrl, setPrintImageUrl] = useState("");
+  const [printImageError, setPrintImageError] = useState<string | null>(null);
   const currentTheme = themes[theme];
 
   const finishPrint = useCallback(() => {
@@ -348,9 +351,34 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
     onPrint();
   }, [onPrint]);
 
+  useEffect(() => {
+    let active = true;
+    setPrintImageUrl("");
+    setPrintImageError(null);
+
+    createBoothPrintImage(photoUrls, theme, layout)
+      .then((url) => {
+        if (active) setPrintImageUrl(url);
+      })
+      .catch((err) => {
+        if (active) {
+          setPrintImageError(err instanceof Error ? err.message : "Could not prepare print image.");
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [layout, photoUrls, theme]);
+
   const handlePrint = useCallback(() => {
     if (typeof window === "undefined") {
       onPrint();
+      return;
+    }
+
+    if (!printImageUrl) {
+      setPrintImageError("Print image is still preparing. Please try again.");
       return;
     }
 
@@ -415,7 +443,7 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
     };
 
     document.body.appendChild(printFrame);
-  }, [finishPrint, layout, onPrint, photoUrls, theme]);
+  }, [finishPrint, layout, onPrint, photoUrls, printImageUrl, theme]);
 
   const previews = useMemo(() => photoUrls.slice(0, 4), [photoUrls]);
 
@@ -609,27 +637,32 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
             visibility: hidden !important;
           }
 
-          .booth-print-sheet,
-          .booth-print-sheet * {
+          .booth-print-output,
+          .booth-print-output * {
             visibility: visible !important;
           }
 
-          .booth-print-sheet {
+          .booth-print-output {
             display: flex !important;
             position: fixed !important;
             inset: 0 auto auto 0 !important;
             width: 148mm !important;
             height: 210mm !important;
-            padding: 8mm !important;
-            flex-direction: column !important;
-            align-items: center !important;
-            justify-content: center !important;
-            gap: 4mm !important;
             overflow: hidden !important;
             background: ${currentTheme.printBackground} !important;
-            color: ${currentTheme.textColor} !important;
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
+          }
+
+          .booth-print-output img {
+            display: block !important;
+            width: 148mm !important;
+            height: 210mm !important;
+            object-fit: contain !important;
+          }
+
+          .booth-print-sheet {
+            display: none !important;
           }
 
           .booth-print-title {
@@ -717,26 +750,19 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
         </div>
 
         <div className="flex-1 overflow-auto flex items-center justify-center">
-          <div className={`h-[525px] w-[370px] border border-[#CBD5E1] shadow-2xl flex flex-col items-center justify-center gap-3 p-5 ${currentTheme.sheetClass}`}>
-            {layout === "grid" ? (
-              <div className="grid grid-cols-2 gap-3">
-                {previews.map((url, index) => (
-                  <PreviewPhoto key={`${url}-${index}`} url={url} className="h-[155px] w-[130px] border-4 border-white" />
-                ))}
-              </div>
-            ) : layout === "film" ? (
-              <div className="flex flex-col gap-2 bg-[#111827] p-3">
-                {previews.map((url, index) => (
-                  <PreviewPhoto key={`${url}-${index}`} url={url} className="h-[86px] w-[220px] border-4 border-white" />
-                ))}
-              </div>
+          <div className={`booth-print-output h-[525px] w-[370px] border border-[#CBD5E1] shadow-2xl ${currentTheme.sheetClass}`}>
+            {printImageUrl ? (
+              <img src={printImageUrl} alt="Final photo booth print sheet" className="h-full w-full object-contain" />
             ) : (
-              previews.map((url, index) => (
-                <PreviewPhoto key={`${url}-${index}`} url={url} className="h-[96px] w-[260px] border-4 border-white" />
-              ))
+              <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-[#64748B]">
+                Preparing print image...
+              </div>
             )}
           </div>
         </div>
+        {printImageError && (
+          <p className="text-center text-sm font-semibold text-red-600">{printImageError}</p>
+        )}
 
         <div className="flex gap-3 w-full max-w-md">
           <Btn variant="secondary" onClick={onBack} className="flex-1">

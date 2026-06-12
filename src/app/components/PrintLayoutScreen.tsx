@@ -2,6 +2,7 @@ import { Screen, Btn, NavHeader } from "./ui";
 import type { PhotoOptions } from "./PhotoOptionsScreen";
 import { Printer, ZoomIn, ZoomOut } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createIdPrintImage } from "../print-image";
 
 interface Props {
   photoUrl: string;
@@ -313,6 +314,8 @@ function PrintPhotoTile({
 export function PrintLayoutScreen({ photoUrl, originalPhotoUrl, options, onBack, onPrint }: Props) {
   const [zoom, setZoom] = useState(1);
   const [mobilePrintMode, setMobilePrintMode] = useState(false);
+  const [printImageUrl, setPrintImageUrl] = useState("");
+  const [printImageError, setPrintImageError] = useState<string | null>(null);
   const printStartedRef = useRef(false);
 
   // A5 = 148 × 210 mm — render at 2.5px/mm → 370 × 525px
@@ -329,9 +332,34 @@ export function PrintLayoutScreen({ photoUrl, originalPhotoUrl, options, onBack,
     onPrint();
   }, [onPrint]);
 
+  useEffect(() => {
+    let active = true;
+    setPrintImageUrl("");
+    setPrintImageError(null);
+
+    createIdPrintImage(photoUrl, options)
+      .then((url) => {
+        if (active) setPrintImageUrl(url);
+      })
+      .catch((err) => {
+        if (active) {
+          setPrintImageError(err instanceof Error ? err.message : "Could not prepare print image.");
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [options, photoUrl]);
+
   const handlePrint = useCallback(() => {
     if (typeof window === "undefined") {
       onPrint();
+      return;
+    }
+
+    if (!printImageUrl) {
+      setPrintImageError("Print image is still preparing. Please try again.");
       return;
     }
 
@@ -395,7 +423,7 @@ export function PrintLayoutScreen({ photoUrl, originalPhotoUrl, options, onBack,
     };
 
     document.body.appendChild(printFrame);
-  }, [finishPrint, onPrint, options, photoUrl]);
+  }, [finishPrint, onPrint, options, photoUrl, printImageUrl]);
 
   const renderLayout = () => {
     const bg = options.background;
@@ -651,12 +679,12 @@ export function PrintLayoutScreen({ photoUrl, originalPhotoUrl, options, onBack,
             visibility: hidden !important;
           }
 
-          .print-sheet,
-          .print-sheet * {
+          .print-output,
+          .print-output * {
             visibility: visible !important;
           }
 
-          .print-sheet {
+          .print-output {
             display: block !important;
             position: fixed !important;
             inset: 0 auto auto 0 !important;
@@ -666,6 +694,17 @@ export function PrintLayoutScreen({ photoUrl, originalPhotoUrl, options, onBack,
             background: white !important;
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
+          }
+
+          .print-output img {
+            display: block !important;
+            width: 148mm !important;
+            height: 210mm !important;
+            object-fit: contain !important;
+          }
+
+          .print-sheet {
+            display: none !important;
           }
 
           .print-layout {
@@ -721,7 +760,7 @@ export function PrintLayoutScreen({ photoUrl, originalPhotoUrl, options, onBack,
         {/* Paper preview */}
         <div className="flex-1 overflow-auto flex items-center justify-center">
           <div
-            className="relative bg-white shadow-2xl border border-[#CBD5E1] transition-transform duration-200"
+            className="print-output relative bg-white shadow-2xl border border-[#CBD5E1] transition-transform duration-200"
             style={{
               width: paperW,
               height: paperH,
@@ -729,20 +768,18 @@ export function PrintLayoutScreen({ photoUrl, originalPhotoUrl, options, onBack,
               transformOrigin: "center center",
             }}
           >
-            {/* Rulers */}
-            <div className="absolute -top-5 left-0 right-0 flex items-center justify-between px-2">
-              <span className="text-[9px] text-[#94A3B8]">0</span>
-              <span className="text-[9px] text-[#94A3B8]">148mm</span>
-            </div>
-            <div className="absolute -left-5 top-0 bottom-0 flex flex-col items-center justify-between py-2">
-              <span className="text-[9px] text-[#94A3B8]">0</span>
-              <span className="text-[9px] text-[#94A3B8] rotate-90">210</span>
-            </div>
-            {/* Margin guides */}
-            <div className="absolute inset-[8px] border border-dashed border-blue-200 pointer-events-none" />
-            {renderLayout()}
+            {printImageUrl ? (
+              <img src={printImageUrl} alt="Final print sheet" className="h-full w-full object-contain" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-[#64748B]">
+                Preparing print image...
+              </div>
+            )}
           </div>
         </div>
+        {printImageError && (
+          <p className="text-center text-sm font-semibold text-red-600">{printImageError}</p>
+        )}
 
         {/* Zoom + actions */}
         <div className="flex items-center justify-between gap-4 w-full max-w-md">
