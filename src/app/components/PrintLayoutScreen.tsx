@@ -241,27 +241,45 @@ export function PrintLayoutScreen({ photoUrl, originalPhotoUrl, options, onBack,
     }
 
     printStartedRef.current = true;
-    const printWindow = window.open("", "photobooth-print", "popup=yes,width=900,height=1200");
-
-    if (!printWindow) {
-      window.addEventListener("afterprint", finishPrint, { once: true });
-      window.print();
-      return;
-    }
-
     let finished = false;
+    const printFrame = document.createElement("iframe");
     const finishOnce = () => {
       if (finished) return;
       finished = true;
-      printWindow.close();
+      printFrame.remove();
       finishPrint();
     };
 
-    printWindow.document.open();
-    printWindow.document.write(getPrintSheetHtml(photoUrl, options));
-    printWindow.document.close();
-    printWindow.addEventListener("afterprint", finishOnce, { once: true });
-    printWindow.addEventListener("pagehide", finishOnce, { once: true });
+    printFrame.setAttribute("title", "Photobooth print sheet");
+    printFrame.style.position = "fixed";
+    printFrame.style.right = "0";
+    printFrame.style.bottom = "0";
+    printFrame.style.width = "0";
+    printFrame.style.height = "0";
+    printFrame.style.border = "0";
+    printFrame.style.opacity = "0";
+    printFrame.style.pointerEvents = "none";
+    printFrame.srcdoc = getPrintSheetHtml(photoUrl, options);
+
+    printFrame.onload = () => {
+      const printWindow = printFrame.contentWindow;
+      if (!printWindow) {
+        finishOnce();
+        return;
+      }
+
+      printWindow.addEventListener("afterprint", finishOnce, { once: true });
+      printWindow.focus();
+      printWindow.print();
+
+      window.setTimeout(() => {
+        if (printStartedRef.current) {
+          finishOnce();
+        }
+      }, 60000);
+    };
+
+    document.body.appendChild(printFrame);
   }, [finishPrint, onPrint, options, photoUrl]);
 
   const renderLayout = () => {
