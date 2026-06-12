@@ -11,6 +11,124 @@ interface Props {
   onPrint: () => void;
 }
 
+const printTile1 = { w: 25.4, h: 25.4 };
+const printTile2 = { w: 50.8, h: 50.8 };
+const printTilePassport = { w: 35, h: 45 };
+
+function escapeAttribute(value: string) {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+}
+
+function getPrintTileHtml(url: string, width: number, height: number, bg: PhotoOptions["background"]) {
+  const background =
+    bg === "blue" ? "background:#2563EB;" : bg === "white" ? "background:white;" : "background:white;";
+
+  return `
+    <div class="photo-tile" style="width:${width}mm;height:${height}mm;${background}">
+      <img src="${escapeAttribute(url)}" alt="">
+    </div>
+  `;
+}
+
+function getPrintSheetHtml(photoUrl: string, options: PhotoOptions) {
+  const row = (count: number, width: number, height: number) =>
+    `<div class="row">${Array.from({ length: count }, () =>
+      getPrintTileHtml(photoUrl, width, height, options.background)
+    ).join("")}</div>`;
+
+  const rows =
+    options.printSize === "2x2"
+      ? Array.from({ length: 3 }, () => row(2, printTile2.w, printTile2.h)).join("")
+      : options.printSize === "1x1"
+      ? Array.from({ length: 6 }, () => row(4, printTile1.w, printTile1.h)).join("")
+      : options.printSize === "passport"
+      ? Array.from({ length: 4 }, () => row(3, printTilePassport.w, printTilePassport.h)).join("")
+      : [
+          row(2, printTile2.w, printTile2.h),
+          row(4, printTile1.w, printTile1.h),
+          row(4, printTile1.w, printTile1.h),
+          row(2, printTile2.w, printTile2.h),
+        ].join("");
+
+  return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Photobooth Print</title>
+    <style>
+      @page {
+        size: A5 portrait;
+        margin: 0;
+      }
+
+      html,
+      body {
+        width: 148mm;
+        height: 210mm;
+        margin: 0;
+        padding: 0;
+        background: white;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      .sheet {
+        width: 148mm;
+        height: 210mm;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1.5mm;
+        background: white;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+
+      .row {
+        display: flex;
+        gap: 1.5mm;
+      }
+
+      .photo-tile {
+        overflow: hidden;
+        flex: 0 0 auto;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+
+      .photo-tile img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center 38%;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="sheet">${rows}</main>
+    <script>
+      window.addEventListener("load", function () {
+        setTimeout(function () {
+          window.focus();
+          window.print();
+        }, 250);
+      });
+    </script>
+  </body>
+</html>`;
+}
+
 function PhotoTile({
   url,
   originalUrl,
@@ -110,10 +228,6 @@ export function PrintLayoutScreen({ photoUrl, originalPhotoUrl, options, onBack,
   const tile1 = { w: 63, h: 63 };
   const tile2 = { w: 127, h: 127 };
   const tilePassport = { w: 89, h: 114 };
-  const printTile1 = { w: 25.4, h: 25.4 };
-  const printTile2 = { w: 50.8, h: 50.8 };
-  const printTilePassport = { w: 35, h: 45 };
-
   const finishPrint = useCallback(() => {
     if (!printStartedRef.current) return;
     printStartedRef.current = false;
@@ -127,9 +241,28 @@ export function PrintLayoutScreen({ photoUrl, originalPhotoUrl, options, onBack,
     }
 
     printStartedRef.current = true;
-    window.addEventListener("afterprint", finishPrint, { once: true });
-    window.print();
-  }, [finishPrint, onPrint]);
+    const printWindow = window.open("", "photobooth-print", "popup=yes,width=900,height=1200");
+
+    if (!printWindow) {
+      window.addEventListener("afterprint", finishPrint, { once: true });
+      window.print();
+      return;
+    }
+
+    let finished = false;
+    const finishOnce = () => {
+      if (finished) return;
+      finished = true;
+      printWindow.close();
+      finishPrint();
+    };
+
+    printWindow.document.open();
+    printWindow.document.write(getPrintSheetHtml(photoUrl, options));
+    printWindow.document.close();
+    printWindow.addEventListener("afterprint", finishOnce, { once: true });
+    printWindow.addEventListener("pagehide", finishOnce, { once: true });
+  }, [finishPrint, onPrint, options, photoUrl]);
 
   const renderLayout = () => {
     const bg = options.background;
