@@ -14,6 +14,7 @@ interface Props {
 const printTile1 = { w: 25.4, h: 25.4 };
 const printTile2 = { w: 50.8, h: 50.8 };
 const printTilePassport = { w: 35, h: 45 };
+const androidPrintSessionKey = "photobooth-active-print-session";
 
 function escapeAttribute(value: string) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
@@ -134,32 +135,84 @@ function shouldUsePagePrintFallback() {
 }
 
 function writeAndroidPrintDocument(html: string) {
-  const backButton = `
+  const controls = `
     <style>
-      .return-to-app {
+      .android-print-toolbar {
         position: fixed;
+        left: 12px;
         right: 12px;
         bottom: 12px;
         z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        border: 1px solid #DBEAFE;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 18px 50px rgba(15, 23, 42, 0.18);
+        color: #0F172A;
+        font: 14px Arial, sans-serif;
+        padding: 12px;
+      }
+
+      .android-print-toolbar strong {
+        display: block;
+        margin-bottom: 2px;
+      }
+
+      .android-print-toolbar span {
+        color: #64748B;
+        font-size: 12px;
+      }
+
+      .android-print-actions {
+        display: flex;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+
+      .android-print-actions button {
         border: 0;
         border-radius: 999px;
-        background: #2563EB;
-        color: white;
         font: 700 14px Arial, sans-serif;
         padding: 12px 16px;
       }
 
+      .print-again {
+        background: #2563EB;
+        color: white;
+      }
+
+      .return-to-app {
+        background: #F1F5F9;
+        color: #0F172A;
+      }
+
       @media print {
-        .return-to-app {
+        .android-print-toolbar {
           display: none !important;
         }
       }
     </style>
-    <button class="return-to-app" onclick="window.location.reload()">Return to App</button>
+    <div class="android-print-toolbar">
+      <div>
+        <strong>Print preview is ready</strong>
+        <span>Use Print Again for another copy, or return to the app.</span>
+      </div>
+      <div class="android-print-actions">
+        <button class="print-again" onclick="window.print()">Print Again</button>
+        <button class="return-to-app" onclick="window.location.reload()">Return</button>
+      </div>
+    </div>
   `;
 
   document.open();
-  document.write(html.replace("</body>", `${backButton}</body>`));
+  document.write(
+    html
+      .replace("setTimeout(function () {", "setTimeout(function () { document.body.classList.add('print-dialog-opened');")
+      .replace("</body>", `${controls}</body>`)
+  );
   document.close();
 }
 
@@ -285,6 +338,15 @@ export function PrintLayoutScreen({ photoUrl, originalPhotoUrl, options, onBack,
     };
 
     if (shouldUsePagePrintFallback()) {
+      window.sessionStorage.setItem(
+        androidPrintSessionKey,
+        JSON.stringify({
+          mode: "id-photo",
+          photoUrl,
+          originalPhotoUrl,
+          options,
+        })
+      );
       writeAndroidPrintDocument(getPrintSheetHtml(photoUrl, options));
       return;
     }

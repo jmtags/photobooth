@@ -2,11 +2,14 @@ import { Screen, Btn } from "./ui";
 import { motion } from "motion/react";
 
 interface Props {
+  appMode?: "id-photo" | "photo-booth";
   onPrintAnother: () => void;
   onNewSession: () => void;
 }
 
-export function SuccessScreen({ onPrintAnother, onNewSession }: Props) {
+export function SuccessScreen({ appMode = "id-photo", onPrintAnother, onNewSession }: Props) {
+  const itemLabel = appMode === "photo-booth" ? "Photo Booth Sheet" : "ID Photo";
+
   return (
     <Screen className="items-center justify-center">
       <div className="flex flex-col items-center gap-8 px-6 max-w-sm mx-auto text-center">
@@ -45,9 +48,9 @@ export function SuccessScreen({ onPrintAnother, onNewSession }: Props) {
           transition={{ delay: 0.4 }}
           className="flex flex-col gap-2"
         >
-          <h1 className="text-3xl font-extrabold text-[#0F172A]">Your ID Photo Is Ready!</h1>
+          <h1 className="text-3xl font-extrabold text-[#0F172A]">Your {itemLabel} Is Ready!</h1>
           <p className="text-[#64748B] text-sm leading-relaxed">
-            Your photo has been sent to the printer. Please collect it from the print tray.
+            Your print has been sent to the printer. Please collect it from the print tray.
           </p>
         </motion.div>
 
@@ -110,6 +113,9 @@ export function SuccessScreen({ onPrintAnother, onNewSession }: Props) {
           <Btn onClick={onPrintAnother} variant="secondary" fullWidth>
             Print Another Copy
           </Btn>
+          <p className="text-xs text-[#64748B]">
+            This returns to the same print preview so you can print the current sheet again.
+          </p>
           <Btn onClick={onNewSession} fullWidth>
             Start New Session
           </Btn>
