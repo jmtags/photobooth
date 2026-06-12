@@ -19,6 +19,7 @@ import {
   Maximize,
   Minimize,
   ScanFace,
+  Images,
 } from "lucide-react";
 import {
   AreaChart,
@@ -61,6 +62,8 @@ const navItems = [
 
 interface Props {
   onExit: () => void;
+  appMode: "id-photo" | "photo-booth";
+  onAppModeChange: (mode: "id-photo" | "photo-booth") => void;
   layoutMode: "auto" | "portrait" | "landscape";
   onLayoutModeChange: (mode: "auto" | "portrait" | "landscape") => void;
   kioskMode: boolean;
@@ -71,6 +74,8 @@ interface Props {
 
 export function AdminDashboard({
   onExit,
+  appMode,
+  onAppModeChange,
   layoutMode,
   onLayoutModeChange,
   kioskMode,
@@ -305,6 +310,54 @@ export function AdminDashboard({
 
           {activeNav === "settings" && (
             <div className="flex flex-col gap-6 max-w-4xl">
+              <Card className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center">
+                    <Images size={22} color="#4F46E5" />
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="text-xl font-bold text-[#0F172A]">Kiosk Mode</h2>
+                    <p className="text-sm text-[#64748B] mt-1">
+                      Choose the customer flow shown on the welcome screen.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6">
+                  {[
+                    {
+                      id: "id-photo" as const,
+                      title: "ID Photo",
+                      desc: "Take one photo, choose ID background and size, then print.",
+                    },
+                    {
+                      id: "photo-booth" as const,
+                      title: "Photo Booth",
+                      desc: "Take three photos, then print them together on A5.",
+                    },
+                  ].map((option) => {
+                    const active = appMode === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => onAppModeChange(option.id)}
+                        className={`rounded-2xl border p-4 text-left transition-all ${
+                          active
+                            ? "border-[#2563EB] bg-blue-50 shadow-sm"
+                            : "border-[#E2E8F0] bg-white hover:border-[#93C5FD]"
+                        }`}
+                      >
+                        <span className={`font-semibold ${active ? "text-[#2563EB]" : "text-[#0F172A]"}`}>
+                          {option.title}
+                        </span>
+                        <p className="text-sm text-[#64748B] mt-2">{option.desc}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </Card>
+
               <Card className="p-6">
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center">

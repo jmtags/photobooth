@@ -5,6 +5,9 @@ import { Camera, Maximize, RotateCcw, SwitchCamera } from "lucide-react";
 interface Props {
   onBack: () => void;
   onCapture: (dataUrl: string) => void;
+  appMode?: "id-photo" | "photo-booth";
+  boothCaptureCount?: number;
+  boothCaptureTotal?: number;
   kioskMode: boolean;
   fullscreenActive: boolean;
   onRequestFullscreen: () => void | Promise<void>;
@@ -13,6 +16,9 @@ interface Props {
 export function CameraScreen({
   onBack,
   onCapture,
+  appMode = "id-photo",
+  boothCaptureCount = 0,
+  boothCaptureTotal = 3,
   kioskMode,
   fullscreenActive,
   onRequestFullscreen,
@@ -25,6 +31,8 @@ export function CameraScreen({
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const isPhotoBooth = appMode === "photo-booth";
+  const nextBoothShot = Math.min(boothCaptureCount + 1, boothCaptureTotal);
 
   const stopCamera = () => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -140,7 +148,12 @@ export function CameraScreen({
   return (
     <div className="h-full min-h-full bg-black flex flex-col font-[Inter,sans-serif]">
       <div className="relative z-10">
-        <NavHeader onBack={onBack} title="Take Photo" step={0} totalSteps={5} />
+        <NavHeader
+          onBack={onBack}
+          title={isPhotoBooth ? `Photo ${nextBoothShot} of ${boothCaptureTotal}` : "Take Photo"}
+          step={0}
+          totalSteps={5}
+        />
       </div>
 
       <div className="flex-1 overflow-y-auto bg-black">
@@ -182,7 +195,11 @@ export function CameraScreen({
 
                 <div className="absolute bottom-5 left-4 right-4 flex justify-center">
                   <span className="rounded-full bg-black/55 px-3 py-1.5 text-xs text-white backdrop-blur-sm">
-                    {ready ? "Center your face in the guide" : "Starting camera..."}
+                    {ready
+                      ? isPhotoBooth
+                        ? `Take photo ${nextBoothShot} of ${boothCaptureTotal}`
+                        : "Center your face in the guide"
+                      : "Starting camera..."}
                   </span>
                 </div>
 
@@ -212,9 +229,13 @@ export function CameraScreen({
 
           <div className="flex w-full flex-col gap-4 rounded-[28px] bg-black/90 p-4 text-white lg:w-[20rem] lg:flex-shrink-0 lg:justify-between">
             <div className="flex flex-col gap-3">
-              <p className="text-lg font-semibold">Camera Controls</p>
+              <p className="text-lg font-semibold">
+                {isPhotoBooth ? "Photo Booth" : "Camera Controls"}
+              </p>
               <p className="text-sm text-white/65">
-                Landscape mode now keeps the preview contained so the action buttons stay visible on tablets and PCs.
+                {isPhotoBooth
+                  ? "Take three photos. The print sheet will be prepared after the last shot."
+                  : "Landscape mode now keeps the preview contained so the action buttons stay visible on tablets and PCs."}
               </p>
             </div>
 

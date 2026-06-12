@@ -8,6 +8,7 @@ import { PhotoReviewScreen } from "./components/PhotoReviewScreen";
 import { PhotoOptionsScreen, type PhotoOptions } from "./components/PhotoOptionsScreen";
 import { LivePreviewScreen } from "./components/LivePreviewScreen";
 import { PrintLayoutScreen } from "./components/PrintLayoutScreen";
+import { PhotoBoothPrintScreen } from "./components/PhotoBoothPrintScreen";
 import { PrintingScreen } from "./components/PrintingScreen";
 import { SuccessScreen } from "./components/SuccessScreen";
 import { AdminDashboard } from "./components/AdminDashboard";
@@ -26,8 +27,10 @@ type Screen =
   | "admin";
 
 type LayoutMode = "auto" | "portrait" | "landscape";
+type AppMode = "id-photo" | "photo-booth";
 
 type DisplaySettings = {
+  appMode: AppMode;
   layoutMode: LayoutMode;
   kioskMode: boolean;
 };
@@ -56,12 +59,14 @@ type FullscreenElement = HTMLElement & {
 export default function App() {
   const [screen, setScreen] = useState<Screen>("welcome");
   const [photoUrl, setPhotoUrl] = useState<string>("");
+  const [boothPhotoUrls, setBoothPhotoUrls] = useState<string[]>([]);
   const [processedPhotoUrl, setProcessedPhotoUrl] = useState<string>("");
   const [options, setOptions] = useState<PhotoOptions>(defaultOptions);
   const [processing, setProcessing] = useState(false);
   const [processError, setProcessError] = useState<string | null>(null);
   const [processNotice, setProcessNotice] = useState<string | null>(null);
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings>({
+    appMode: "id-photo",
     layoutMode: "auto",
     kioskMode: false,
   });
@@ -88,6 +93,10 @@ export default function App() {
 
       const parsed = JSON.parse(raw) as Partial<DisplaySettings>;
       setDisplaySettings((current) => ({
+        appMode:
+          parsed.appMode === "photo-booth" || parsed.appMode === "id-photo"
+            ? parsed.appMode
+            : current.appMode,
         layoutMode:
           parsed.layoutMode === "portrait" ||
           parsed.layoutMode === "landscape" ||
@@ -201,12 +210,26 @@ export default function App() {
   }, [exitFullscreen, requestFullscreen]);
 
   const handleCapture = useCallback((url: string) => {
-    setPhotoUrl(url);
-    setProcessedPhotoUrl("");
     setProcessError(null);
     setProcessNotice(null);
+
+    if (displaySettings.appMode === "photo-booth") {
+      setBoothPhotoUrls((current) => {
+        const next = [...current, url].slice(0, 3);
+        if (next.length >= 3) {
+          go("layout");
+        } else {
+          go("camera");
+        }
+        return next;
+      });
+      return;
+    }
+
+    setPhotoUrl(url);
+    setProcessedPhotoUrl("");
     go("review");
-  }, []);
+  }, [displaySettings.appMode]);
 
   const handlePreview = async () => {
     setProcessing(true);
@@ -232,6 +255,7 @@ export default function App() {
 
   const handleNewSession = () => {
     setPhotoUrl("");
+    setBoothPhotoUrls([]);
     setProcessedPhotoUrl("");
     setOptions(defaultOptions);
     setProcessError(null);
@@ -250,7 +274,14 @@ export default function App() {
         }`}
       >
         {screen === "welcome" && (
-          <WelcomeScreen onStart={() => go("camera")} onAdmin={() => go("admin")} />
+          <WelcomeScreen
+            appMode={displaySettings.appMode}
+            onStart={() => {
+              setBoothPhotoUrls([]);
+              go("camera");
+            }}
+            onAdmin={() => go("admin")}
+          />
         )}
         {screen === "instructions" && (
           <InstructionsScreen onBack={() => go("welcome")} onContinue={() => go("camera")} />
@@ -259,6 +290,9 @@ export default function App() {
           <CameraScreen
             onBack={() => go("welcome")}
             onCapture={handleCapture}
+            appMode={displaySettings.appMode}
+            boothCaptureCount={boothPhotoUrls.length}
+            boothCaptureTotal={3}
             kioskMode={displaySettings.kioskMode}
             fullscreenActive={fullscreenActive}
             onRequestFullscreen={toggleFullscreen}
@@ -291,12 +325,22 @@ export default function App() {
             onGenerate={() => go("layout")}
           />
         )}
-        {screen === "layout" && (
+        {screen === "layout" && displaySettings.appMode === "id-photo" && (
           <PrintLayoutScreen
             photoUrl={processedPhotoUrl || photoUrl}
             originalPhotoUrl={photoUrl}
             options={options}
             onBack={() => go("preview")}
+            onPrint={() => go("printing")}
+          />
+        )}
+        {screen === "layout" && displaySettings.appMode === "photo-booth" && boothPhotoUrls.length >= 3 && (
+          <PhotoBoothPrintScreen
+            photoUrls={boothPhotoUrls}
+            onBack={() => {
+              setBoothPhotoUrls([]);
+              go("camera");
+            }}
             onPrint={() => go("printing")}
           />
         )}
@@ -310,6 +354,10 @@ export default function App() {
         {screen === "admin" && (
           <AdminDashboard
             onExit={() => go("welcome")}
+            appMode={displaySettings.appMode}
+            onAppModeChange={(appMode) =>
+              setDisplaySettings((current) => ({ ...current, appMode }))
+            }
             layoutMode={displaySettings.layoutMode}
             onLayoutModeChange={(layoutMode) =>
               setDisplaySettings((current) => ({ ...current, layoutMode }))

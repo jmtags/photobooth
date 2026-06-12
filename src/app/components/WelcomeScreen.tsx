@@ -1,11 +1,14 @@
 import { Screen, Btn, FeatureChip, Logo } from "./ui";
 
 interface Props {
+  appMode?: "id-photo" | "photo-booth";
   onStart: () => void;
   onAdmin: () => void;
 }
 
-export function WelcomeScreen({ onStart, onAdmin }: Props) {
+export function WelcomeScreen({ appMode = "id-photo", onStart, onAdmin }: Props) {
+  const isPhotoBooth = appMode === "photo-booth";
+
   return (
     <Screen className="items-center justify-between">
       {/* Header */}
@@ -60,7 +63,15 @@ export function WelcomeScreen({ onStart, onAdmin }: Props) {
             Tap. Smile.<br />Print.
           </h1>
           <p className="text-base text-[#64748B] leading-relaxed">
-            We will help you make<br />your ID photo.
+            {isPhotoBooth ? (
+              <>
+                Take three fun photos<br />and print them on A5.
+              </>
+            ) : (
+              <>
+                We will help you make<br />your ID photo.
+              </>
+            )}
           </p>
         </div>
 
@@ -75,8 +86,8 @@ export function WelcomeScreen({ onStart, onAdmin }: Props) {
 
       {/* Feature chips */}
       <div className="w-full max-w-lg mx-auto px-6 pb-8 flex gap-3">
-        <FeatureChip icon="fast" label="Take Photo" />
-        <FeatureChip icon="quality" label="Pick Style" />
+        <FeatureChip icon="fast" label={isPhotoBooth ? "3 Photos" : "Take Photo"} />
+        <FeatureChip icon="quality" label={isPhotoBooth ? "A5 Sheet" : "Pick Style"} />
         <FeatureChip icon="print" label="Print" />
       </div>
     </Screen>
