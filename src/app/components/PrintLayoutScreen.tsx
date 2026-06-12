@@ -165,14 +165,27 @@ function writeAndroidPrintDocument(html: string) {
         font-size: 12px;
       }
 
-      .return-to-app {
+      .android-print-actions {
+        display: flex;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+
+      .android-print-actions button {
         border: 0;
         border-radius: 999px;
-        background: #2563EB;
-        color: white;
-        flex-shrink: 0;
         font: 700 14px Arial, sans-serif;
         padding: 12px 16px;
+      }
+
+      .open-print-dialog {
+        background: #2563EB;
+        color: white;
+      }
+
+      .return-to-app {
+        background: #F1F5F9;
+        color: #0F172A;
       }
 
       @media print {
@@ -184,9 +197,12 @@ function writeAndroidPrintDocument(html: string) {
     <div class="android-print-toolbar">
       <div>
         <strong>Print sheet is ready</strong>
-        <span>Finish the Android print dialog, then return for the next session.</span>
+        <span>Tap Print to open the Android print dialog.</span>
       </div>
-      <button class="return-to-app" onclick="window.location.reload()">Return</button>
+      <div class="android-print-actions">
+        <button class="open-print-dialog" onclick="window.print()">Print</button>
+        <button class="return-to-app" onclick="window.location.reload()">Return</button>
+      </div>
     </div>
   `;
 
@@ -194,6 +210,7 @@ function writeAndroidPrintDocument(html: string) {
   document.write(
     html
       .replace("setTimeout(function () {", "setTimeout(function () { document.body.classList.add('print-dialog-opened');")
+      .replace("window.print();", "")
       .replace("</body>", `${controls}</body>`)
   );
   document.close();
