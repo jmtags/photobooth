@@ -345,7 +345,14 @@ export function PrintLayoutScreen({ photoUrl, originalPhotoUrl, options, onBack,
     };
 
     if (shouldUsePagePrintFallback()) {
-      writeAndroidPrintDocument(getPrintSheetHtml(photoUrl, options));
+      window.addEventListener(
+        "afterprint",
+        () => {
+          window.setTimeout(() => window.location.reload(), 500);
+        },
+        { once: true }
+      );
+      window.print();
       return;
     }
 

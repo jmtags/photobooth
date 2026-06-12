@@ -365,7 +365,14 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
     };
 
     if (shouldUsePagePrintFallback()) {
-      writeAndroidPrintDocument(getBoothPrintHtml(photoUrls, theme, layout));
+      window.addEventListener(
+        "afterprint",
+        () => {
+          window.setTimeout(() => window.location.reload(), 500);
+        },
+        { once: true }
+      );
+      window.print();
       return;
     }
 
