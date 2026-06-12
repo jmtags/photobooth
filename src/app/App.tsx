@@ -303,7 +303,7 @@ export default function App() {
         {screen === "printing" && <PrintingScreen onDone={() => go("success")} />}
         {screen === "success" && (
           <SuccessScreen
-            onPrintAnother={() => go("printing")}
+            onPrintAnother={() => go("layout")}
             onNewSession={handleNewSession}
           />
         )}

@@ -7,9 +7,8 @@ interface Props {
 }
 
 const steps = [
-  { label: "Removing Background", duration: 1800 },
-  { label: "Applying Attire", duration: 1600 },
-  { label: "Generating Layout", duration: 1400 },
+  { label: "Preparing Sheet", duration: 900 },
+  { label: "Opening Print Dialog", duration: 900 },
   { label: "Sending To Printer", duration: 1200 },
 ];
 
@@ -73,7 +72,7 @@ export function PrintingScreen({ onDone }: Props) {
 
         <div className="flex flex-col gap-2">
           <h2 className="text-2xl font-bold text-[#0F172A]">Preparing Your Print</h2>
-          <p className="text-[#64748B] text-sm">Please wait while we process your photo</p>
+          <p className="text-[#64748B] text-sm">Please wait while we prepare your print</p>
         </div>
 
         <div className="w-full flex flex-col gap-3">
