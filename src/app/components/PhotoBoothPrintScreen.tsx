@@ -581,7 +581,13 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
     <Screen>
       <style>{`
         .booth-print-sheet {
-          display: none;
+          position: fixed;
+          left: -10000px;
+          top: 0;
+          width: 148mm;
+          height: 210mm;
+          opacity: 0;
+          pointer-events: none;
         }
 
         @page {
