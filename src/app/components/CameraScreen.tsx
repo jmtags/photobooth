@@ -8,6 +8,7 @@ interface Props {
   appMode?: "id-photo" | "photo-booth";
   boothCaptureCount?: number;
   boothCaptureTotal?: number;
+  boothPhotoUrls?: string[];
   kioskMode: boolean;
   fullscreenActive: boolean;
   onRequestFullscreen: () => void | Promise<void>;
@@ -19,6 +20,7 @@ export function CameraScreen({
   appMode = "id-photo",
   boothCaptureCount = 0,
   boothCaptureTotal = 3,
+  boothPhotoUrls = [],
   kioskMode,
   fullscreenActive,
   onRequestFullscreen,
@@ -222,8 +224,14 @@ export function CameraScreen({
 
                 {countdown !== null && (
                   <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                    <div className="flex h-24 w-24 items-center justify-center rounded-full bg-black/60">
-                      <span className="text-5xl font-bold text-white">{countdown}</span>
+                    <div className="flex flex-col items-center gap-3 rounded-[28px] bg-black/70 px-8 py-6 text-center shadow-2xl">
+                      <span className="text-sm font-semibold uppercase tracking-[0.2em] text-white/70">
+                        {isPhotoBooth ? `Photo ${nextBoothShot}` : "Get Ready"}
+                      </span>
+                      <span className="text-7xl font-extrabold text-white">{countdown}</span>
+                      <span className="text-base font-semibold text-white">
+                        {countdown === 1 ? "Smile!" : "Hold still"}
+                      </span>
                     </div>
                   </div>
                 )}
@@ -255,6 +263,48 @@ export function CameraScreen({
                   : "Landscape mode now keeps the preview contained so the action buttons stay visible on tablets and PCs."}
               </p>
             </div>
+
+            {isPhotoBooth && (
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-sm font-semibold text-white">Captured</p>
+                  <p className="text-xs font-semibold text-white/60">
+                    {boothCaptureCount}/{boothCaptureTotal}
+                  </p>
+                </div>
+                <div className="grid grid-cols-4 gap-2 lg:grid-cols-2">
+                  {Array.from({ length: boothCaptureTotal }, (_, index) => {
+                    const url = boothPhotoUrls[index];
+                    const active = index === boothCaptureCount && countdown !== null;
+                    return (
+                      <div
+                        key={index}
+                        className={`relative aspect-[4/3] overflow-hidden rounded-xl border ${
+                          url
+                            ? "border-white/30 bg-white"
+                            : active
+                            ? "border-[#2563EB] bg-blue-500/20"
+                            : "border-white/10 bg-black/30"
+                        }`}
+                      >
+                        {url ? (
+                          <img src={url} alt={`Captured photo ${index + 1}`} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-xs font-bold text-white/50">
+                            {index + 1}
+                          </div>
+                        )}
+                        {active && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-sm font-bold text-white">
+                            {countdown}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center justify-between gap-4 lg:flex-col lg:items-stretch">
               <button

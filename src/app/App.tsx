@@ -305,6 +305,7 @@ export default function App() {
             appMode={displaySettings.appMode}
             boothCaptureCount={boothPhotoUrls.length}
             boothCaptureTotal={4}
+            boothPhotoUrls={boothPhotoUrls}
             kioskMode={displaySettings.kioskMode}
             fullscreenActive={fullscreenActive}
             onRequestFullscreen={toggleFullscreen}
@@ -329,6 +330,7 @@ export default function App() {
         )}
         {screen === "booth-options" && displaySettings.appMode === "photo-booth" && (
           <PhotoBoothOptionsScreen
+            photoUrls={boothPhotoUrls}
             theme={boothTheme}
             layout={boothLayout}
             onThemeChange={setBoothTheme}
