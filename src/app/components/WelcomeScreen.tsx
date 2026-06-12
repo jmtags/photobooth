@@ -65,7 +65,7 @@ export function WelcomeScreen({ appMode = "id-photo", onStart, onAdmin }: Props)
           <p className="text-base text-[#64748B] leading-relaxed">
             {isPhotoBooth ? (
               <>
-                Take three fun photos<br />and print them on A5.
+                Take four fun photos<br />and print them on A5.
               </>
             ) : (
               <>
@@ -86,8 +86,8 @@ export function WelcomeScreen({ appMode = "id-photo", onStart, onAdmin }: Props)
 
       {/* Feature chips */}
       <div className="w-full max-w-lg mx-auto px-6 pb-8 flex gap-3">
-        <FeatureChip icon="fast" label={isPhotoBooth ? "3 Photos" : "Take Photo"} />
-        <FeatureChip icon="quality" label={isPhotoBooth ? "A5 Sheet" : "Pick Style"} />
+        <FeatureChip icon="fast" label={isPhotoBooth ? "4 Photos" : "Take Photo"} />
+        <FeatureChip icon="quality" label={isPhotoBooth ? "Themes" : "Pick Style"} />
         <FeatureChip icon="print" label="Print" />
       </div>
     </Screen>

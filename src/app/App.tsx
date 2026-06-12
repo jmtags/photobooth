@@ -9,6 +9,11 @@ import { PhotoOptionsScreen, type PhotoOptions } from "./components/PhotoOptions
 import { LivePreviewScreen } from "./components/LivePreviewScreen";
 import { PrintLayoutScreen } from "./components/PrintLayoutScreen";
 import { PhotoBoothPrintScreen } from "./components/PhotoBoothPrintScreen";
+import {
+  PhotoBoothOptionsScreen,
+  type PhotoBoothLayout,
+  type PhotoBoothTheme,
+} from "./components/PhotoBoothOptionsScreen";
 import { PrintingScreen } from "./components/PrintingScreen";
 import { SuccessScreen } from "./components/SuccessScreen";
 import { AdminDashboard } from "./components/AdminDashboard";
@@ -20,6 +25,7 @@ type Screen =
   | "camera"
   | "review"
   | "options"
+  | "booth-options"
   | "preview"
   | "layout"
   | "printing"
@@ -60,6 +66,8 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>("welcome");
   const [photoUrl, setPhotoUrl] = useState<string>("");
   const [boothPhotoUrls, setBoothPhotoUrls] = useState<string[]>([]);
+  const [boothTheme, setBoothTheme] = useState<PhotoBoothTheme>("classic");
+  const [boothLayout, setBoothLayout] = useState<PhotoBoothLayout>("strip");
   const [processedPhotoUrl, setProcessedPhotoUrl] = useState<string>("");
   const [options, setOptions] = useState<PhotoOptions>(defaultOptions);
   const [processing, setProcessing] = useState(false);
@@ -215,9 +223,9 @@ export default function App() {
 
     if (displaySettings.appMode === "photo-booth") {
       setBoothPhotoUrls((current) => {
-        const next = [...current, url].slice(0, 3);
-        if (next.length >= 3) {
-          go("layout");
+        const next = [...current, url].slice(0, 4);
+        if (next.length >= 4) {
+          go("booth-options");
         } else {
           go("camera");
         }
@@ -256,6 +264,8 @@ export default function App() {
   const handleNewSession = () => {
     setPhotoUrl("");
     setBoothPhotoUrls([]);
+    setBoothTheme("classic");
+    setBoothLayout("strip");
     setProcessedPhotoUrl("");
     setOptions(defaultOptions);
     setProcessError(null);
@@ -278,6 +288,8 @@ export default function App() {
             appMode={displaySettings.appMode}
             onStart={() => {
               setBoothPhotoUrls([]);
+              setBoothTheme("classic");
+              setBoothLayout("strip");
               go("camera");
             }}
             onAdmin={() => go("admin")}
@@ -292,7 +304,7 @@ export default function App() {
             onCapture={handleCapture}
             appMode={displaySettings.appMode}
             boothCaptureCount={boothPhotoUrls.length}
-            boothCaptureTotal={3}
+            boothCaptureTotal={4}
             kioskMode={displaySettings.kioskMode}
             fullscreenActive={fullscreenActive}
             onRequestFullscreen={toggleFullscreen}
@@ -315,6 +327,19 @@ export default function App() {
             processError={processError}
           />
         )}
+        {screen === "booth-options" && displaySettings.appMode === "photo-booth" && (
+          <PhotoBoothOptionsScreen
+            theme={boothTheme}
+            layout={boothLayout}
+            onThemeChange={setBoothTheme}
+            onLayoutChange={setBoothLayout}
+            onBack={() => {
+              setBoothPhotoUrls([]);
+              go("camera");
+            }}
+            onContinue={() => go("layout")}
+          />
+        )}
         {screen === "preview" && (
           <LivePreviewScreen
             photoUrl={processedPhotoUrl || photoUrl}
@@ -334,12 +359,13 @@ export default function App() {
             onPrint={() => go("printing")}
           />
         )}
-        {screen === "layout" && displaySettings.appMode === "photo-booth" && boothPhotoUrls.length >= 3 && (
+        {screen === "layout" && displaySettings.appMode === "photo-booth" && boothPhotoUrls.length >= 4 && (
           <PhotoBoothPrintScreen
             photoUrls={boothPhotoUrls}
+            theme={boothTheme}
+            layout={boothLayout}
             onBack={() => {
-              setBoothPhotoUrls([]);
-              go("camera");
+              go("booth-options");
             }}
             onPrint={() => go("printing")}
           />

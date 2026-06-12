@@ -333,7 +333,7 @@ export function AdminDashboard({
                     {
                       id: "photo-booth" as const,
                       title: "Photo Booth",
-                      desc: "Take three photos, then print them together on A5.",
+                      desc: "Automatically take four photos, then print them together on A5.",
                     },
                   ].map((option) => {
                     const active = appMode === option.id;

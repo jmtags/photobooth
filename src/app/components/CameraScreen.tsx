@@ -33,6 +33,7 @@ export function CameraScreen({
   const [countdown, setCountdown] = useState<number | null>(null);
   const isPhotoBooth = appMode === "photo-booth";
   const nextBoothShot = Math.min(boothCaptureCount + 1, boothCaptureTotal);
+  const autoCaptureKeyRef = useRef("");
 
   const stopCamera = () => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -145,6 +146,22 @@ export function CameraScreen({
     onCapture(canvas.toDataURL("image/jpeg", 0.92));
   };
 
+  useEffect(() => {
+    if (!isPhotoBooth || !ready || error || countdown !== null) return;
+    if (boothCaptureCount >= boothCaptureTotal) return;
+
+    const key = `${boothCaptureCount}-${boothCaptureTotal}`;
+    if (autoCaptureKeyRef.current === key) return;
+    autoCaptureKeyRef.current = key;
+
+    const timeout = window.setTimeout(() => {
+      handleCapture();
+    }, boothCaptureCount === 0 ? 1000 : 1400);
+
+    return () => window.clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boothCaptureCount, boothCaptureTotal, countdown, error, isPhotoBooth, ready]);
+
   return (
     <div className="h-full min-h-full bg-black flex flex-col font-[Inter,sans-serif]">
       <div className="relative z-10">
@@ -197,7 +214,7 @@ export function CameraScreen({
                   <span className="rounded-full bg-black/55 px-3 py-1.5 text-xs text-white backdrop-blur-sm">
                     {ready
                       ? isPhotoBooth
-                        ? `Take photo ${nextBoothShot} of ${boothCaptureTotal}`
+                        ? `Auto capture ${nextBoothShot} of ${boothCaptureTotal}`
                         : "Center your face in the guide"
                       : "Starting camera..."}
                   </span>
@@ -234,7 +251,7 @@ export function CameraScreen({
               </p>
               <p className="text-sm text-white/65">
                 {isPhotoBooth
-                  ? "Take three photos. The print sheet will be prepared after the last shot."
+                  ? "The camera will automatically take four photos, then prepare your print sheet."
                   : "Landscape mode now keeps the preview contained so the action buttons stay visible on tablets and PCs."}
               </p>
             </div>
