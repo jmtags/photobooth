@@ -241,6 +241,51 @@ function getBoothPrintHtml(photoUrls: string[], theme: PhotoBoothTheme, layout: 
 </html>`;
 }
 
+function getGeneratedPrintImageHtml(imageUrl: string, background: string) {
+  const escapedUrl = escapeAttribute(imageUrl);
+
+  return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Photo Booth Print</title>
+    <style>
+      @page {
+        size: A5 portrait;
+        margin: 0;
+      }
+
+      html,
+      body {
+        width: 148mm;
+        height: 210mm;
+        margin: 0;
+        padding: 0;
+        background: ${background};
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        overflow: hidden;
+      }
+
+      img {
+        display: block;
+        width: 148mm;
+        height: 210mm;
+        object-fit: contain;
+      }
+    </style>
+  </head>
+  <body>
+    <img id="print-image" src="${escapedUrl}" alt="">
+  </body>
+</html>`;
+}
+
 function shouldUsePagePrintFallback() {
   return typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
 }
@@ -469,7 +514,7 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
     printFrame.style.border = "0";
     printFrame.style.opacity = "0";
     printFrame.style.pointerEvents = "none";
-    printFrame.srcdoc = getBoothPrintHtml(photoUrls, theme, layout);
+    printFrame.srcdoc = getGeneratedPrintImageHtml(printImageUrl, currentTheme.printBackground);
 
     printFrame.onload = () => {
       const printWindow = printFrame.contentWindow;
@@ -490,7 +535,7 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
     };
 
     document.body.appendChild(printFrame);
-  }, [finishPrint, layout, onPrint, photoUrls, printImageUrl, theme]);
+  }, [currentTheme.printBackground, finishPrint, onPrint, printImageUrl]);
 
   const previews = useMemo(() => photoUrls.slice(0, 4), [photoUrls]);
 

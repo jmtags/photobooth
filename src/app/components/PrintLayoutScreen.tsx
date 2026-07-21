@@ -130,6 +130,51 @@ function getPrintSheetHtml(photoUrl: string, options: PhotoOptions) {
 </html>`;
 }
 
+function getGeneratedPrintImageHtml(imageUrl: string) {
+  const escapedUrl = escapeAttribute(imageUrl);
+
+  return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Photobooth Print</title>
+    <style>
+      @page {
+        size: A5 portrait;
+        margin: 0;
+      }
+
+      html,
+      body {
+        width: 148mm;
+        height: 210mm;
+        margin: 0;
+        padding: 0;
+        background: white;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        overflow: hidden;
+      }
+
+      img {
+        display: block;
+        width: 148mm;
+        height: 210mm;
+        object-fit: contain;
+      }
+    </style>
+  </head>
+  <body>
+    <img id="print-image" src="${escapedUrl}" alt="">
+  </body>
+</html>`;
+}
+
 function shouldUsePagePrintFallback() {
   return typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
 }
@@ -449,7 +494,7 @@ export function PrintLayoutScreen({ photoUrl, originalPhotoUrl, options, onBack,
     printFrame.style.border = "0";
     printFrame.style.opacity = "0";
     printFrame.style.pointerEvents = "none";
-    printFrame.srcdoc = getPrintSheetHtml(photoUrl, options);
+    printFrame.srcdoc = getGeneratedPrintImageHtml(printImageUrl);
 
     printFrame.onload = () => {
       const printWindow = printFrame.contentWindow;
@@ -470,7 +515,7 @@ export function PrintLayoutScreen({ photoUrl, originalPhotoUrl, options, onBack,
     };
 
     document.body.appendChild(printFrame);
-  }, [finishPrint, onPrint, options, photoUrl, printImageUrl]);
+  }, [finishPrint, onPrint, printImageUrl]);
 
   const renderLayout = () => {
     const bg = options.background;
