@@ -3,6 +3,7 @@ import { Printer } from "lucide-react";
 import { Screen, Btn, NavHeader } from "./ui";
 import type { PhotoBoothLayout, PhotoBoothTheme } from "./PhotoBoothOptionsScreen";
 import { createBoothPrintImage } from "../print-image";
+import { shareOrSavePrintImage } from "../share-print-image";
 
 interface Props {
   photoUrls: string[];
@@ -304,6 +305,7 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
   const [mobilePrintMode, setMobilePrintMode] = useState(false);
   const [printImageUrl, setPrintImageUrl] = useState("");
   const [printImageError, setPrintImageError] = useState<string | null>(null);
+  const [androidShareStatus, setAndroidShareStatus] = useState<string | null>(null);
   const currentTheme = themes[theme];
 
   const finishPrint = useCallback(() => {
@@ -321,6 +323,23 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
 
     printStartedRef.current = true;
     setMobilePrintMode(true);
+  }, [printImageUrl]);
+
+  const handleSharePrintImage = useCallback(async () => {
+    if (!printImageUrl) return;
+
+    setAndroidShareStatus(null);
+    try {
+      const result = await shareOrSavePrintImage(printImageUrl, "photo-booth-print-sheet.jpg");
+      setAndroidShareStatus(
+        result === "shared"
+          ? "Print sheet shared. Choose your USB printer app if Android shows it."
+          : "Print sheet saved to downloads."
+      );
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      setAndroidShareStatus("Could not share the print sheet. Use Print or try again.");
+    }
   }, [printImageUrl]);
 
   useEffect(() => {
@@ -511,6 +530,7 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
             bottom: 12px;
             z-index: 20;
             display: flex;
+            flex-wrap: wrap;
             gap: 10px;
             border: 1px solid #DBEAFE;
             border-radius: 18px;
@@ -520,7 +540,7 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
           }
 
           .android-print-toolbar button {
-            flex: 1;
+            flex: 1 1 30%;
             border: 0;
             border-radius: 999px;
             font: 700 14px Arial, sans-serif;
@@ -535,6 +555,13 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
           .android-print-done {
             background: #F1F5F9;
             color: #0F172A;
+          }
+
+          .android-print-status {
+            flex: 1 1 100%;
+            color: #475569;
+            font: 600 12px Arial, sans-serif;
+            text-align: center;
           }
 
           @media print {
@@ -566,9 +593,13 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
             <button className="android-print-now" type="button" onClick={() => window.print()}>
               Print
             </button>
+            <button className="android-print-done" type="button" onClick={() => void handleSharePrintImage()}>
+              Share
+            </button>
             <button className="android-print-done" type="button" onClick={finishPrint}>
               Done
             </button>
+            {androidShareStatus && <div className="android-print-status">{androidShareStatus}</div>}
           </div>
         </div>
       </Screen>
