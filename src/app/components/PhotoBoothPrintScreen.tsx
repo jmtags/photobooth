@@ -290,145 +290,6 @@ function shouldUsePagePrintFallback() {
   return typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
 }
 
-function printGeneratedImageOnAndroid(imageUrl: string, background: string) {
-  const escapedUrl = escapeAttribute(imageUrl);
-  document.open();
-  document.write(`<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>Photo Booth Print</title>
-    <style>
-      @page {
-        size: A5 portrait;
-        margin: 0;
-      }
-
-      html,
-      body {
-        width: 148mm;
-        height: 210mm;
-        margin: 0;
-        padding: 0;
-        background: ${background};
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      body {
-        overflow: hidden;
-      }
-
-      img {
-        display: block;
-        width: 148mm;
-        height: 210mm;
-        object-fit: contain;
-      }
-    </style>
-  </head>
-  <body>
-    <img src="${escapedUrl}" alt="">
-    <script>
-      window.addEventListener("afterprint", function () {
-        window.setTimeout(function () {
-          window.location.reload();
-        }, 500);
-      });
-    </script>
-  </body>
-</html>`);
-  document.close();
-  window.setTimeout(() => window.print(), 100);
-}
-
-function writeAndroidPrintDocument(html: string) {
-  const controls = `
-    <style>
-      .android-print-toolbar {
-        position: fixed;
-        left: 12px;
-        right: 12px;
-        bottom: 12px;
-        z-index: 10;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        border: 1px solid #DBEAFE;
-        border-radius: 18px;
-        background: rgba(255, 255, 255, 0.96);
-        box-shadow: 0 18px 50px rgba(15, 23, 42, 0.18);
-        color: #0F172A;
-        font: 14px Arial, sans-serif;
-        padding: 12px;
-      }
-
-      .android-print-toolbar strong {
-        display: block;
-        margin-bottom: 2px;
-      }
-
-      .android-print-toolbar span {
-        color: #64748B;
-        font-size: 12px;
-      }
-
-      .android-print-actions {
-        display: flex;
-        gap: 8px;
-        flex-shrink: 0;
-      }
-
-      .android-print-actions button {
-        border: 0;
-        border-radius: 999px;
-        font: 700 14px Arial, sans-serif;
-        padding: 12px 16px;
-      }
-
-      .open-print-dialog {
-        background: #2563EB;
-        color: white;
-      }
-
-      .return-to-app {
-        background: #F1F5F9;
-        color: #0F172A;
-      }
-
-      @media print {
-        .android-print-toolbar {
-          display: none !important;
-        }
-      }
-    </style>
-    <script>
-      window.addEventListener("afterprint", function () {
-        window.setTimeout(function () {
-          window.location.reload();
-        }, 500);
-      });
-    </script>
-    <div class="android-print-toolbar">
-      <div>
-        <strong>Print sheet is ready</strong>
-        <span>Tap Print to open the Android print dialog.</span>
-      </div>
-      <div class="android-print-actions">
-        <button class="open-print-dialog" onclick="window.print()">Print</button>
-        <button class="return-to-app" onclick="window.location.reload()">Return</button>
-      </div>
-    </div>
-  `;
-
-  document.open();
-  document.write(html.replace("window.print();", "").replace("</body>", `${controls}</body>`));
-  document.close();
-}
-
 function PreviewPhoto({ url, className }: { url: string; className: string }) {
   return (
     <div className={`overflow-hidden bg-white shadow ring-1 ring-[#CBD5E1] ${className}`}>
@@ -439,6 +300,7 @@ function PreviewPhoto({ url, className }: { url: string; className: string }) {
 
 export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrint }: Props) {
   const printStartedRef = useRef(false);
+  const androidAutoPrintRef = useRef(false);
   const [mobilePrintMode, setMobilePrintMode] = useState(false);
   const [printImageUrl, setPrintImageUrl] = useState("");
   const [printImageError, setPrintImageError] = useState<string | null>(null);
@@ -447,8 +309,47 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
   const finishPrint = useCallback(() => {
     if (!printStartedRef.current) return;
     printStartedRef.current = false;
+    androidAutoPrintRef.current = false;
     onPrint();
   }, [onPrint]);
+
+  const openAndroidPrint = useCallback(() => {
+    if (!printImageUrl) {
+      setPrintImageError("Print image is still preparing. Please try again.");
+      return;
+    }
+
+    printStartedRef.current = true;
+    setMobilePrintMode(true);
+  }, [printImageUrl]);
+
+  useEffect(() => {
+    if (!mobilePrintMode || !printImageUrl || androidAutoPrintRef.current) return;
+
+    let cancelled = false;
+    androidAutoPrintRef.current = true;
+
+    const printWhenReady = async () => {
+      const image = document.querySelector<HTMLImageElement>(".android-booth-print-output img");
+      try {
+        await image?.decode();
+      } catch {
+        // Continue even when decode is unavailable or the browser reports a recoverable decode error.
+      }
+
+      window.requestAnimationFrame(() => {
+        window.setTimeout(() => {
+          if (!cancelled) window.print();
+        }, 300);
+      });
+    };
+
+    void printWhenReady();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mobilePrintMode, printImageUrl]);
 
   useEffect(() => {
     let active = true;
@@ -492,7 +393,7 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
     };
 
     if (shouldUsePagePrintFallback()) {
-      printGeneratedImageOnAndroid(printImageUrl, currentTheme.printBackground);
+      openAndroidPrint();
       return;
     }
 
@@ -535,7 +436,7 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
     };
 
     document.body.appendChild(printFrame);
-  }, [currentTheme.printBackground, finishPrint, onPrint, printImageUrl]);
+  }, [currentTheme.printBackground, finishPrint, onPrint, openAndroidPrint, printImageUrl]);
 
   const previews = useMemo(() => photoUrls.slice(0, 4), [photoUrls]);
 
@@ -586,91 +487,54 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
             background: ${currentTheme.printBackground} !important;
           }
 
-          .mobile-direct-booth-sheet {
+          .android-booth-print-output {
             width: 148mm;
             height: 210mm;
             margin: 0 auto;
-            padding: 8mm;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 4mm;
             overflow: hidden;
             background: ${currentTheme.printBackground};
-            color: ${currentTheme.textColor};
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
           }
 
-          .mobile-direct-booth-sheet .booth-print-title {
-            font-size: 10pt;
-            font-weight: 700;
-            letter-spacing: 0.18em;
-            text-transform: uppercase;
-          }
-
-          .mobile-direct-booth-sheet .booth-print-photo {
-            overflow: hidden;
-            flex: 0 0 auto;
-            background: ${currentTheme.frameBackground};
-            border: 1.2mm solid ${currentTheme.border};
-            print-color-adjust: exact;
-            -webkit-print-color-adjust: exact;
-          }
-
-          .mobile-direct-booth-sheet .booth-print-photo img {
+          .android-booth-print-output img {
             display: block;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: center center;
+            width: 148mm;
+            height: 210mm;
+            object-fit: contain;
           }
 
-          .mobile-direct-booth-sheet .booth-print-strip {
+          .android-print-toolbar {
+            position: fixed;
+            left: 12px;
+            right: 12px;
+            bottom: 12px;
+            z-index: 20;
             display: flex;
-            flex-direction: column;
-            gap: 2.5mm;
+            gap: 10px;
+            border: 1px solid #DBEAFE;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.96);
+            box-shadow: 0 18px 50px rgba(15, 23, 42, 0.18);
+            padding: 12px;
           }
 
-          .mobile-direct-booth-sheet .booth-print-strip .booth-print-photo {
-            width: 106mm;
-            height: 43mm;
+          .android-print-toolbar button {
+            flex: 1;
+            border: 0;
+            border-radius: 999px;
+            font: 700 14px Arial, sans-serif;
+            padding: 12px 16px;
           }
 
-          .mobile-direct-booth-sheet .booth-print-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 58mm);
-            gap: 3mm;
+          .android-print-now {
+            background: #2563EB;
+            color: white;
           }
 
-          .mobile-direct-booth-sheet .booth-print-grid .booth-print-photo {
-            width: 58mm;
-            height: 72mm;
-          }
-
-          .mobile-direct-booth-sheet .booth-print-film {
-            width: 92mm;
-            padding: 3mm;
-            display: flex;
-            flex-direction: column;
-            gap: 2mm;
-            background: ${theme === "bold" ? "#020617" : "#111827"};
-            print-color-adjust: exact;
-            -webkit-print-color-adjust: exact;
-          }
-
-          .mobile-direct-booth-sheet .booth-print-film-frame {
-            padding: 1.5mm 4mm;
-            background:
-              repeating-linear-gradient(90deg, white 0 2mm, transparent 2mm 7mm) top / 100% 2mm no-repeat,
-              repeating-linear-gradient(90deg, white 0 2mm, transparent 2mm 7mm) bottom / 100% 2mm no-repeat;
-          }
-
-          .mobile-direct-booth-sheet .booth-print-film-frame .booth-print-photo {
-            width: 76mm;
-            height: 38mm;
-            border-color: white;
+          .android-print-done {
+            background: #F1F5F9;
+            color: #0F172A;
           }
 
           @media print {
@@ -683,15 +547,29 @@ export function PhotoBoothPrintScreen({ photoUrls, theme, layout, onBack, onPrin
               background: ${currentTheme.printBackground} !important;
             }
 
-            .mobile-direct-booth-sheet {
+            .android-booth-print-output {
               position: fixed !important;
               inset: 0 auto auto 0 !important;
               margin: 0 !important;
             }
+
+            .android-print-toolbar {
+              display: none !important;
+            }
           }
         `}</style>
         <div className="flex min-h-[100dvh] items-start justify-center" style={{ background: currentTheme.printBackground }}>
-          <div className="mobile-direct-booth-sheet">{printSheetContent}</div>
+          <div className="android-booth-print-output">
+            <img src={printImageUrl} alt="Final photo booth print sheet" />
+          </div>
+          <div className="android-print-toolbar">
+            <button className="android-print-now" type="button" onClick={() => window.print()}>
+              Print
+            </button>
+            <button className="android-print-done" type="button" onClick={finishPrint}>
+              Done
+            </button>
+          </div>
         </div>
       </Screen>
     );
